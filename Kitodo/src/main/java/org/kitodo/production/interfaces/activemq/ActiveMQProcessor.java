@@ -60,8 +60,8 @@ public abstract class ActiveMQProcessor implements MessageListener {
      * Must be implemented to let the service do what it should do.
      *
      * @param ticket
-     *            an object providing access to the fields of the received map
-     *            message
+     *               an object providing access to the fields of the received map
+     *               message
      */
     protected abstract void process(MapMessageObjectReader ticket) throws DAOException, JMSException;
 
@@ -81,8 +81,8 @@ public abstract class ActiveMQProcessor implements MessageListener {
      * “null” and so prevents it from being set up in ActiveMQDirector.
      *
      * @param queueName
-     *            the queue name, if configured, or “null” to prevent the
-     *            processor from being connected.
+     *                  the queue name, if configured, or “null” to prevent the
+     *                  processor from being connected.
      */
     public ActiveMQProcessor(String queueName) {
         this.queueName = queueName;
@@ -102,6 +102,7 @@ public abstract class ActiveMQProcessor implements MessageListener {
     public void onMessage(Message arg) {
         MapMessageObjectReader message;
         String ticketID = null;
+        String providedClientID = null;
 
         try {
             // Basic check message
@@ -111,7 +112,7 @@ public abstract class ActiveMQProcessor implements MessageListener {
                 throw new IllegalArgumentException("Incompatible types.");
             }
             ticketID = message.getMandatoryString("id");
-
+            providedClientID = message.getString("client");
             // turn on logging
             Map<String, String> loggingConfig = new HashMap<>();
             loggingConfig.put("queueName", queueName);
@@ -127,7 +128,9 @@ public abstract class ActiveMQProcessor implements MessageListener {
                     SecurityUserDetails securityUserDetails = new SecurityUserDetails(user);
                     Authentication auth = new UsernamePasswordAuthenticationToken(securityUserDetails, null,
                             securityUserDetails.getAuthorities());
-                    Client clientId = ServiceManager.getClientService().getById(user.getClients().get(0).getId());
+                    Client clientId = Objects.nonNull(providedClientID)
+                            ? ServiceManager.getClientService().getById(Integer.parseInt(providedClientID))
+                            : ServiceManager.getClientService().getById(user.getClients().get(0).getId());
                     securityUserDetails.setSessionClient(clientId);
                     securityContext.setAuthentication(auth);
                 } else {
@@ -166,7 +169,8 @@ public abstract class ActiveMQProcessor implements MessageListener {
      * Sets the message consumer to have it later for shutting down the service.
      *
      * @param messageConsumer
-     *            the MessageConsumer object responsible for checking messages
+     *                        the MessageConsumer object responsible for checking
+     *                        messages
      */
 
     public void setMessageConsumer(MessageConsumer messageConsumer) {

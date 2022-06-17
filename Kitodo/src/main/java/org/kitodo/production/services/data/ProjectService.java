@@ -128,6 +128,19 @@ public class ProjectService extends ClientSearchService<Project, ProjectDTO, Pro
         }
     }
 
+    /**
+     * Find projects by title.
+     *
+     * @param title
+     *            the title
+     * @return a list of projects
+     * @throws DataException
+     *             when there is an error on conversion
+     */
+    public List<ProjectDTO> findByTitle(String title) throws DataException {
+        return convertJSONObjectsToDTOs(findByTitle(title, true), true);
+    }
+
     @Override
     public Long countDatabaseRows() throws DAOException {
         return countDatabaseRows("SELECT COUNT(*) FROM Project");

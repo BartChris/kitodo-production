@@ -130,6 +130,19 @@ public class TemplateService extends ClientSearchService<Template, TemplateDTO, 
     }
 
     /**
+     * Find templates by title.
+     *
+     * @param title
+     *            the title
+     * @return a list of templates
+     * @throws DataException
+     *             when there is an error on conversion
+     */
+    public List<TemplateDTO> findByTitle(String title) throws DataException {
+        return convertJSONObjectsToDTOs(findByTitle(title, true), true);
+    }
+
+    /**
      * Find all templates available to assign to the edited project. It will be
      * displayed in the templateAddPopup.
      *
