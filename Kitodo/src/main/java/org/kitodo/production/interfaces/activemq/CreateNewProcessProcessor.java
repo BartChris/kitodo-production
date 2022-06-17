@@ -87,11 +87,6 @@ public class CreateNewProcessProcessor extends ActiveMQProcessor {
                 // is the empty HashMap necessary?
                 importService.importProcess(ppn, project.getId(), template.getId(), selectedCatalog,
                         new HashMap<String, String>());
-            } else {
-                String selectedCatalog = ticket.getMandatoryString("opac");
-                ImportService importService = ServiceManager.getImportService();
-                importService.importProcess(ppn, 2, 4, selectedCatalog,
-                        new HashMap<String, String>());
             }
         } catch (JMSException | IllegalArgumentException e) {
             e.printStackTrace();
