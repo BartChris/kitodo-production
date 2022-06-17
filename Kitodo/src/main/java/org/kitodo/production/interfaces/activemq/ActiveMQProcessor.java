@@ -60,8 +60,8 @@ public abstract class ActiveMQProcessor implements MessageListener {
      * Must be implemented to let the service do what it should do.
      *
      * @param ticket
-     *               an object providing access to the fields of the received map
-     *               message
+     * an object providing access to the fields of the received map
+     * message
      */
     protected abstract void process(MapMessageObjectReader ticket) throws DAOException, JMSException;
 
@@ -81,8 +81,8 @@ public abstract class ActiveMQProcessor implements MessageListener {
      * “null” and so prevents it from being set up in ActiveMQDirector.
      *
      * @param queueName
-     *                  the queue name, if configured, or “null” to prevent the
-     *                  processor from being connected.
+     * the queue name, if configured, or “null” to prevent the
+     * processor from being connected.
      */
     public ActiveMQProcessor(String queueName) {
         this.queueName = queueName;
