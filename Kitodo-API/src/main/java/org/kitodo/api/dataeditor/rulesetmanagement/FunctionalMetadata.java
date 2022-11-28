@@ -74,7 +74,12 @@ public enum FunctionalMetadata {
     /**
      * Document type metadata use for document classification during process import.
      */
-    DOC_TYPE("docType");
+    DOC_TYPE("docType"),
+
+    /**
+     * Metadata element used to create the title label in the Structure Tree.
+     */
+    STRUCTURE_TREE_TITLE("structure_tree_title");
 
     /**
      * With the logger, text can be written to a log file or to the console.

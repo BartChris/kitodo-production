@@ -37,6 +37,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.kitodo.api.dataeditor.rulesetmanagement.FunctionalMetadata;
 import org.kitodo.api.dataeditor.rulesetmanagement.RulesetManagementInterface;
 import org.kitodo.api.dataformat.LogicalDivision;
 import org.kitodo.api.dataformat.PhysicalDivision;
@@ -845,7 +846,8 @@ public class DataEditorForm implements MetadataTreeTableInterface, RulesetSetupI
      */
     public String getStructureElementTitle(Object dataObject) {
         if (dataObject instanceof LogicalDivision) {
-            return DataEditorService.getTitleValue((LogicalDivision) dataObject, structurePanel.getTitleMetadata());
+            return DataEditorService.getTitleValue((LogicalDivision) dataObject,
+                    ruleset.getFunctionalKeys(FunctionalMetadata.STRUCTURE_TREE_TITLE));
         }
         return "";
     }

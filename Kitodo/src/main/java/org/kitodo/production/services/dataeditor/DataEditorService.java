@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 
 import javax.faces.model.SelectItem;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kitodo.api.Metadata;
@@ -47,6 +48,7 @@ import org.kitodo.production.forms.createprocess.ProcessFieldedMetadata;
 import org.kitodo.production.forms.dataeditor.DataEditorForm;
 import org.kitodo.production.forms.dataeditor.StructureTreeNode;
 import org.kitodo.production.helper.Helper;
+import org.kitodo.production.metadata.MetadataEditor;
 import org.kitodo.serviceloader.KitodoServiceLoader;
 import org.primefaces.model.TreeNode;
 
@@ -98,29 +100,19 @@ public class DataEditorService {
      * Retrieve and return title value from given IncludedStructuralElement.
      *
      * @param element IncludedStructuralElement for which the title value is returned.
-     * @param metadataTitleKey as a String that its value will be displayed.
+     * @param functionalMetadataKeys the collection of functional metadatakeys.
      * @return title value of given element
      */
-    public static String getTitleValue(LogicalDivision element, String metadataTitleKey) {
-        String[] metadataPath = metadataTitleKey.split("@");
-        int lastIndex = metadataPath.length - 1;
-        Collection<Metadata> metadata = element.getMetadata();
-        for (int i = 0; i < lastIndex; i++) {
-            final String metadataKey = metadataPath[i];
-            metadata = metadata.stream()
-                    .filter(currentMetadata -> Objects.equals(currentMetadata.getKey(), metadataKey))
-                    .filter(MetadataGroup.class::isInstance).map(MetadataGroup.class::cast)
-                    .flatMap(metadataGroup -> metadataGroup.getGroup().stream())
-                    .collect(Collectors.toList());
+    public static String getTitleValue(LogicalDivision element, Collection<String> functionalMetadataKeys) {
+        String titleLabel = "";
+        for (String functionalMetadataKey : functionalMetadataKeys){
+            titleLabel = MetadataEditor.getMetadataValue(element, functionalMetadataKey);
+            if (StringUtils.isNotBlank(titleLabel)){
+                return titleLabel;
+            }
         }
-        Optional<String> metadataTitle = metadata.stream()
-                .filter(currentMetadata -> Objects.equals(currentMetadata.getKey(), metadataPath[lastIndex]))
-                .filter(MetadataEntry.class::isInstance).map(MetadataEntry.class::cast)
-                .map(MetadataEntry::getValue)
-                .filter(value -> !value.isEmpty())
-                .findFirst();
-        if (metadataTitle.isPresent()) {
-            return metadataTitle.get();
+        if (Objects.nonNull(element.getLabel())){
+            return element.getLabel();
         }
         return " - ";
     }
