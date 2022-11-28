@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.faces.model.SelectItem;
 
@@ -36,11 +37,9 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.jdbc.Work;
 import org.kitodo.api.dataeditor.rulesetmanagement.StructuralElementViewInterface;
-import org.kitodo.api.dataformat.LogicalDivision;
-import org.kitodo.api.dataformat.MediaVariant;
-import org.kitodo.api.dataformat.PhysicalDivision;
-import org.kitodo.api.dataformat.View;
+import org.kitodo.api.dataformat.*;
 import org.kitodo.data.database.beans.Process;
 import org.kitodo.data.database.beans.Template;
 import org.kitodo.data.exceptions.DataException;
@@ -51,6 +50,7 @@ import org.kitodo.production.metadata.MetadataEditor;
 import org.kitodo.production.model.Subfolder;
 import org.kitodo.production.services.ServiceManager;
 import org.kitodo.production.services.dataeditor.DataEditorService;
+import org.omnifaces.component.tree.Tree;
 import org.primefaces.event.NodeCollapseEvent;
 import org.primefaces.event.NodeExpandEvent;
 import org.primefaces.event.NodeSelectEvent;
@@ -1677,13 +1677,14 @@ public class StructurePanel implements Serializable {
         if (Objects.nonNull(selectedLogicalNode) && selectedLogicalNode.getData() instanceof  StructureTreeNode) {
             StructureTreeNode structureTreeNode = (StructureTreeNode) selectedLogicalNode.getData();
             if (structureTreeNode.getDataObject() instanceof View) {
-                List<TreeNode> logicalNodeSiblings = selectedLogicalNode.getParent().getParent().getChildren();
-                int logicalNodeIndex = logicalNodeSiblings.indexOf(selectedLogicalNode.getParent());
+                List<TreeNode> logicalDivisions = StructurePanel.treeStream(this.getLogicalTree()).collect(Collectors.toList());
+                //List<TreeNode> logicalNodeSiblings = selectedLogicalNode.getParent().getParent().getChildren();
+                int logicalNodeIndex = logicalDivisions.indexOf(selectedLogicalNode.getParent());
                 List<TreeNode> viewSiblings = selectedLogicalNode.getParent().getChildren();
                 // check for selected node's positions and siblings after selected node's parent
                 if (viewSiblings.indexOf(selectedLogicalNode) == viewSiblings.size() - 1
-                        && logicalNodeSiblings.size() > logicalNodeIndex + 1) {
-                    TreeNode nextSibling = logicalNodeSiblings.get(logicalNodeIndex + 1);
+                        && logicalDivisions.size() > logicalNodeIndex + 1) {
+                    TreeNode nextSibling = logicalDivisions.get(logicalNodeIndex + 1);
                     if (nextSibling.getData() instanceof StructureTreeNode) {
                         StructureTreeNode structureTreeNodeSibling = (StructureTreeNode) nextSibling.getData();
                         return structureTreeNodeSibling.getDataObject() instanceof LogicalDivision;
@@ -1695,6 +1696,12 @@ public class StructurePanel implements Serializable {
         return false;
     }
 
+    public static <T extends TreeNode> Stream<TreeNode> treeStream(TreeNode tree) {
+        return Stream.concat(Stream.of(tree), tree.getChildren().stream().flatMap(StructurePanel::treeStream)
+                .filter(treeNode -> ((StructureTreeNode) treeNode.getData()).getDataObject() instanceof LogicalDivision)
+        );
+    }
+
     /**
      * Assign selected Node's PhysicalDivision to the next LogicalDivision.
      */
@@ -1703,9 +1710,10 @@ public class StructurePanel implements Serializable {
             View view = (View) ((StructureTreeNode) selectedLogicalNode.getData()).getDataObject();
             View viewToAssign = new View();
             viewToAssign.setPhysicalDivision(view.getPhysicalDivision());
-            List<TreeNode> logicalNodeSiblings = selectedLogicalNode.getParent().getParent().getChildren();
-            int logicalNodeIndex = logicalNodeSiblings.indexOf(selectedLogicalNode.getParent());
-            TreeNode nextSibling = logicalNodeSiblings.get(logicalNodeIndex + 1);
+            List<TreeNode> logicalDivisions = StructurePanel.treeStream(this.getLogicalTree()).collect(Collectors.toList());
+            //List<TreeNode> logicalNodeSiblings = selectedLogicalNode.getParent().getParent().getChildren();
+            int logicalNodeIndex = logicalDivisions.indexOf(selectedLogicalNode.getParent());
+            TreeNode nextSibling = logicalDivisions.get(logicalNodeIndex + 1);
             StructureTreeNode structureTreeNodeSibling = (StructureTreeNode) nextSibling.getData();
             LogicalDivision logicalDivision = (LogicalDivision) structureTreeNodeSibling.getDataObject();
             dataEditor.assignView(logicalDivision, viewToAssign, 0);
