@@ -16,17 +16,11 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.URI;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.Locale.LanguageRange;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.enterprise.context.SessionScoped;
 import javax.faces.context.FacesContext;
@@ -847,7 +841,8 @@ public class DataEditorForm implements MetadataTreeTableInterface, RulesetSetupI
     public String getStructureElementTitle(Object dataObject) {
         if (dataObject instanceof LogicalDivision) {
             return DataEditorService.getTitleValue((LogicalDivision) dataObject,
-                    ruleset.getFunctionalKeys(FunctionalMetadata.STRUCTURE_TREE_TITLE));
+                    Stream.concat(ruleset.getFunctionalKeys(FunctionalMetadata.STRUCTURE_TREE_TITLE).stream(),
+                            ruleset.getFunctionalKeys(FunctionalMetadata.TITLE).stream()).collect(Collectors.toList()));
         }
         return "";
     }

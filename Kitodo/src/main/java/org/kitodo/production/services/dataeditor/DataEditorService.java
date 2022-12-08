@@ -106,6 +106,10 @@ public class DataEditorService {
     public static String getTitleValue(LogicalDivision element, Collection<String> functionalMetadataKeys) {
         String titleLabel = "";
         for (String functionalMetadataKey : functionalMetadataKeys){
+            //this might not work with Group fields, see old implementatuion
+            //maybe the keys have already the correct structure xxx@xxx
+            //https://github.com/kitodo/kitodo-production/issues/4461
+
             titleLabel = MetadataEditor.getMetadataValue(element, functionalMetadataKey);
             if (StringUtils.isNotBlank(titleLabel)){
                 return titleLabel;
