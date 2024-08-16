@@ -12,10 +12,7 @@
 package org.kitodo.data.elasticsearch.search;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import javax.ws.rs.HttpMethod;
 
@@ -23,8 +20,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.nio.entity.NStringEntity;
 import org.apache.http.util.EntityUtils;
-import org.elasticsearch.action.get.GetRequest;
-import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.get.*;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Request;
@@ -146,6 +142,37 @@ public class SearchRestClient extends KitodoRestClient {
             throw new DataException(e);
         }
         return Collections.emptyMap();
+    }
+
+    public List<Map<String, Object>> getDocuments(String type, List<Integer> ids) throws CustomResponseException, DataException {
+        List<Map<String, Object>> documents = new ArrayList<>();
+
+        try {
+            // Create a MultiGetRequest to fetch multiple documents
+            MultiGetRequest multiGetRequest = new MultiGetRequest();
+
+            // Add each document ID to the request
+            for (Integer id : ids) {
+                multiGetRequest.add(new MultiGetRequest.Item(this.indexBase + "_" + type, String.valueOf(id)));
+            }
+
+            // Execute the multi-get request
+            MultiGetResponse multiGetResponse = highLevelClient.mget(multiGetRequest, RequestOptions.DEFAULT);
+
+            // Iterate through the responses and extract the documents
+            for (MultiGetItemResponse itemResponse : multiGetResponse.getResponses()) {
+                if (!itemResponse.isFailed() && itemResponse.getResponse().isExists()) {
+                    Map<String, Object> document = itemResponse.getResponse().getSourceAsMap();
+                    document.put("id", itemResponse.getResponse().getId());  // Add the ID to the document
+                    documents.add(document);  // Add the document to the result list
+                }
+            }
+        } catch (ResponseException e) {
+            handleResponseException(e);
+        } catch (IOException e) {
+            throw new DataException(e);
+        }
+        return documents;  // Return the list of documents
     }
 
     /**

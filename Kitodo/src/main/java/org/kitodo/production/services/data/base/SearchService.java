@@ -18,13 +18,7 @@ import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 import javax.json.JsonObject;
 import javax.ws.rs.HttpMethod;
@@ -457,6 +451,29 @@ public abstract class SearchService<T extends BaseIndexedBean, S extends BaseDTO
             throw new DataException(e);
         }
     }
+
+    public Map<Integer, String>findByIds(List<Integer> ids) throws DataException {
+        try {
+            List<Map<String, Object>> documents = searcher.getDocuments(ids);
+
+            // Create a map to store the ID and baseType pairs
+            Map<Integer, String> idToBaseTypeMap = new HashMap<>();
+
+            for (Map<String, Object> document : documents) {
+                // Extract the "id" and "baseType" fields
+                Integer id = Integer.parseInt((String) document.get("id")); // Assuming the ID is stored as a String
+                String baseType = (String) document.get("baseType");
+
+                // Add the ID and baseType to the map
+                idToBaseTypeMap.put(id, baseType);
+            }
+
+            return idToBaseTypeMap;
+        } catch (CustomResponseException e) {
+            throw new DataException(e);
+        }
+    }
+
 
     /**
      * Find list of DTO objects by query.

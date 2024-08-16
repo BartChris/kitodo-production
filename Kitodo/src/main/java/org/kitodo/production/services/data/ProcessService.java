@@ -1730,6 +1730,17 @@ public class ProcessService extends ProjectSearchService<Process, ProcessDTO, Pr
         return "";
     }
 
+    public Map<Integer, String> getBaseTypes(List<Integer> processIds) {
+        try {
+         return findByIds(processIds);
+        }
+        catch (DataException e) {
+
+        }
+        return new HashMap<>();
+
+    }
+
     /**
      * Filter for correction / solution messages.
      *
