@@ -18,7 +18,15 @@ import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
 
 import javax.json.JsonObject;
 import javax.ws.rs.HttpMethod;
@@ -452,22 +460,23 @@ public abstract class SearchService<T extends BaseIndexedBean, S extends BaseDTO
         }
     }
 
-    public Map<Integer, String>findByIds(List<Integer> ids) throws DataException {
+    /**
+     * Retrieves documents for the given list of IDs, extracts the "id" and "baseType" fields,
+     * and maps each ID to its corresponding base type.
+     *
+     * @param ids
+     *            list of document IDs to retrieve and process.
+     * @return a map where the keys are document IDs and the values are their associated base types.
+     */
+    public Map<Integer, String> getIdTypeMap(List<Integer> ids) throws DataException {
         try {
             List<Map<String, Object>> documents = searcher.getDocuments(ids);
-
-            // Create a map to store the ID and baseType pairs
             Map<Integer, String> idToBaseTypeMap = new HashMap<>();
-
             for (Map<String, Object> document : documents) {
-                // Extract the "id" and "baseType" fields
-                Integer id = Integer.parseInt((String) document.get("id")); // Assuming the ID is stored as a String
+                Integer id = Integer.parseInt((String) document.get("id"));
                 String baseType = (String) document.get("baseType");
-
-                // Add the ID and baseType to the map
                 idToBaseTypeMap.put(id, baseType);
             }
-
             return idToBaseTypeMap;
         } catch (CustomResponseException e) {
             throw new DataException(e);

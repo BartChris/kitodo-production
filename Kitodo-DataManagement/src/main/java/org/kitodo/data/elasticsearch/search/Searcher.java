@@ -12,7 +12,11 @@
 package org.kitodo.data.elasticsearch.search;
 
 import java.io.StringReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -101,6 +105,18 @@ public class Searcher extends Index {
     }
 
     /**
+     * Get documents by id.
+     *
+     * @param ids
+     *            of searched document as List
+     * @return JSONObject
+     */
+    public List<Map<String, Object>> getDocuments(List<Integer> ids) throws CustomResponseException, DataException {
+        SearchRestClient restClient = initiateRestClient();
+        return restClient.getDocuments(this.type,ids);
+    }
+
+    /**
      * Find document by id.
      *
      * @param id
@@ -110,11 +126,6 @@ public class Searcher extends Index {
     public Map<String, Object> findDocument(Integer id) throws CustomResponseException, DataException {
         SearchRestClient restClient = initiateRestClient();
         return restClient.getDocument(this.type, id);
-    }
-
-    public List<Map<String, Object>> getDocuments(List<Integer> ids) throws CustomResponseException, DataException {
-        SearchRestClient restClient = initiateRestClient();
-        return restClient.getDocuments(this.type,ids);
     }
 
     /**
