@@ -673,9 +673,9 @@ public class ProcessFieldedMetadata extends ProcessDetail implements Serializabl
         try {
             if (Objects.nonNull(division)) {
                 division.getContentIds().clear();
-                if (!division.getType().equals(PhysicalDivision.TYPE_PAGE)) {
+                //if (!division.getType().equals(PhysicalDivision.TYPE_PAGE)) {
                     division.setOrderlabel(null);
-                }
+                //}
                 division.setLabel(null);
             }
             metadata.clear();
@@ -689,7 +689,7 @@ public class ProcessFieldedMetadata extends ProcessDetail implements Serializabl
                 }
             }
             if (Objects.nonNull(hiddenMetadata)) {
-                metadata.addAll(hiddenMetadata);
+                processHiddenMetadata();
             }
         } catch (InvalidMetadataValueException invalidValueException) {
             if (Objects.isNull(division)) {
@@ -707,6 +707,29 @@ public class ProcessFieldedMetadata extends ProcessDetail implements Serializabl
             copy = false;
         }
     }
+
+    private void processHiddenMetadata() {
+        for (Metadata metadatum : hiddenMetadata) {
+            if (metadatum instanceof MetadataEntry) {
+                MetadataEntry metadataEntry = (MetadataEntry) metadatum;
+                String key = metadataEntry.getKey().toUpperCase();
+                String value = metadataEntry.getValue();
+                switch (key) {
+                    case "LABEL":
+                        division.setLabel(value);
+                        break;
+                    case "ORDERLABEL":
+                        division.setOrderlabel(value);
+                        break;
+                    case "CONTENTIDS":
+                        division.getContentIds().add(URI.create(value));
+                        break;
+                }
+            }
+        }
+        metadata.addAll(hiddenMetadata);
+    }
+
 
     /**
      * Removes a process detail.
