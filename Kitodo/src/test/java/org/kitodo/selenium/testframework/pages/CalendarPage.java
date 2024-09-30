@@ -196,7 +196,9 @@ public class CalendarPage extends Page<CalendarPage> {
     public int countIssues() {
         await("Wait for calendar issues to be displayed")
                 .untilAsserted(() -> assertTrue(getById(CALENDAR).isDisplayed()));
-        return getById(CALENDAR).findElements(By.cssSelector(CALENDAR_ISSUES)).size();
+        // Always re-locate elements to avoid stale reference
+        List<WebElement> issues = getById(CALENDAR).findElements(By.cssSelector(CALENDAR_ISSUES));
+        return issues.size();
     }
 
     private void addMetadata(String type, String value, String addButton) {
@@ -228,6 +230,16 @@ public class CalendarPage extends Page<CalendarPage> {
                 .untilAsserted(() -> assertTrue(getById(METADATA_VALUE).isEnabled()));
         getById(METADATA_VALUE).sendKeys(value);
         getById(CALENDAR_DIALOG_CLOSE_BUTTON).click();
+    }
+
+    public List<WebElement> getMetadataElements(String issueName) {
+        // Locate the metadata elements for the given issueName and return them as a list
+        return Browser.getDriver().findElements(By.xpath("//table//tr[contains(., '" + issueName + "')]//td"));
+    }
+
+    public List<String> extractMetadataFromElements(List<WebElement> elements) {
+        // Extract text from each WebElement and return as a list of strings
+        return elements.stream().map(WebElement::getText).collect(Collectors.toList());
     }
     
     private WebElement getIssue(String name) {

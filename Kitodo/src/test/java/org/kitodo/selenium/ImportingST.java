@@ -21,6 +21,7 @@ import com.xebialabs.restito.server.StubServer;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -39,7 +40,11 @@ import org.kitodo.selenium.testframework.pages.ProcessesPage;
 import org.kitodo.selenium.testframework.pages.ProjectsPage;
 import org.kitodo.test.utils.ProcessTestUtils;
 import org.kitodo.test.utils.TestConstants;
+import org.openqa.selenium.StaleElementReferenceException;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 public class ImportingST extends BaseTestSelenium {
 
@@ -156,20 +161,44 @@ public class ImportingST extends BaseTestSelenium {
      */
     @Test
     public void checkHierarchyImport() throws Exception {
+        // Create a new process
         projectsPage.createNewProcess();
-        Select catalogSelectMenu = new Select(importPage.getCatalogMenu());
+
+        // Ensure catalog menu is interactable
+        WebElement catalogMenuElement = waitForElement(importPage.getCatalogMenu(), "catalog menu");
+        Select catalogSelectMenu = new Select(catalogMenuElement);
         assertEquals(TestConstants.K10PLUS, catalogSelectMenu.getFirstSelectedOption().getAttribute("label"), "Wrong default catalog selected");
+
+        // Select Kalliope catalog
         importPage.selectKalliope();
-        Select searchFieldSelectMenu = new Select(importPage.getSearchFieldMenu());
+
+        // Ensure search field menu is interactable
+        WebElement searchFieldMenuElement = waitForElement(importPage.getSearchFieldMenu(), "search field menu");
+        Select searchFieldSelectMenu = new Select(searchFieldMenuElement);
         assertEquals(TestConstants.IDENTIFIER, searchFieldSelectMenu.getFirstSelectedOption().getAttribute("label"), "Wrong default search field selected");
+
+        // Enter search value and configure import
         importPage.enterTestSearchValue(TestConstants.KALLIOPE_PARENT_ID);
         importPage.activateChildProcessImport();
         importPage.decreaseImportDepth();
-        importPage.getSearchButton().click();
+
+        // Ensure search button is clickable and click it
+        WebElement searchButton = waitForElement(importPage.getSearchButton(), "search button");
+        searchButton.click();
+
+        // Ensure hierarchy panel is visible after performing the search
+        waitForVisibility(importPage.getHierarchyPanel(), "hierarchy panel");
         assertTrue(importPage.isHierarchyPanelVisible(), "Hierarchy panel should be visible");
+
+        // Add PPN and title
         importPage.addPpnAndTitle();
+
+        // Ensure process title is fetched properly
         String parentTitle = importPage.getProcessTitle();
+
+        // Save the process
         Pages.getProcessFromTemplatePage().save();
+
         processesPage.applyFilter(parentTitle);
         assertEquals(1, processesPage.countListedProcesses(), "Exactly one imported parent process should be displayed");
         List<String> processIds = processesPage.getProcessIds();
@@ -180,4 +209,20 @@ public class ImportingST extends BaseTestSelenium {
         assertEquals(3, childProcessIds.size(), "Wrong number of child processes");
         ProcessTestUtils.removeTestProcess(processId);
     }
+
+    // Helper method to wait for an element to be present and clickable
+    private WebElement waitForElement(WebElement element, String elementName) {
+        WebDriverWait wait = new WebDriverWait(Browser.getDriver(), 10);
+        return wait.until(ExpectedConditions.elementToBeClickable(element));
+    }
+
+    // Helper method to wait for visibility of an element
+    private void waitForVisibility(WebElement element, String elementName) {
+        WebDriverWait wait = new WebDriverWait(Browser.getDriver(), 10);
+        wait.until(ExpectedConditions.visibilityOf(element));
+    }
+
+
+
 }
+

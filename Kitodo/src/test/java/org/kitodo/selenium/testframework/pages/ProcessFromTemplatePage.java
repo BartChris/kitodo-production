@@ -325,6 +325,15 @@ public class ProcessFromTemplatePage extends EditPage<ProcessFromTemplatePage> {
      * Check and return whether hierarchy panel is visible or not after triggering catalog import.
      * @return whether hierarchy panel is visible
      */
+    public WebElement getHierarchyPanel() {
+        return Browser.getDriver().findElement(By.id(HIERARCHY_PANEL));
+    }
+
+
+    /**
+     * Check and return whether hierarchy panel is visible or not after triggering catalog import.
+     * @return whether hierarchy panel is visible
+     */
     public boolean isHierarchyPanelVisible() {
         WebElement hierarchyPanel = Browser.getDriver().findElement(By.id(HIERARCHY_PANEL));
         return hierarchyPanel.isDisplayed();
