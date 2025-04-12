@@ -495,7 +495,8 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         dto.setTemplateId(process.getTemplate().getId());
         dto.setProjectId(process.getProject().getId());
         try {
-           dto.setCanBeExported(canBeExported(process));
+           //this is super expensive and has to be refactored...
+            //dto.setCanBeExported(canBeExported(process));
            dto.setCanCreateChildProcess(canCreateChildProcess(process));
         } catch (DAOException | IOException e) {
             throw new RuntimeException(e);
