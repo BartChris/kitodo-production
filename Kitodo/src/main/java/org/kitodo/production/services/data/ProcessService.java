@@ -464,14 +464,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         query.restrictToProjects(projectIDs);
         query.defineSorting(SORT_FIELD_MAPPING.get(sortField), sortOrder);
         query.performIndexSearches();
-        List<Process> results = getByQuery(query.formQueryForAll(), query.getQueryParameters(), offset, limit);
-        List<ProcessTableDTO> dtoList = new ArrayList<>();
-        for (Process process : results) {
-            ProcessTableDTO dto = mapToProcessDto(process);
-            dtoList.add(dto);
-        }
-
-        return results;
+        return getByQuery(query.formQueryForAll(), query.getQueryParameters(), offset, limit);
     }
 
     public List<ProcessTableDTO> loadDataAsDTO(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
@@ -495,8 +488,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         dto.setTemplateId(process.getTemplate().getId());
         dto.setProjectId(process.getProject().getId());
         try {
-           //this is super expensive and has to be refactored...
-            //dto.setCanBeExported(canBeExported(process));
+           dto.setCanBeExported(canBeExported(process));
            dto.setCanCreateChildProcess(canCreateChildProcess(process));
         } catch (DAOException | IOException e) {
             throw new RuntimeException(e);

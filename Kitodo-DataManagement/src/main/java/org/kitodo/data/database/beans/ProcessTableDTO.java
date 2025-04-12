@@ -47,7 +47,7 @@ public class ProcessTableDTO {
         this.templateId = templateId;
     }
 
-    public int getProjectIdId() {
+    public int getProjectId() {
         return projectId;
     }
 

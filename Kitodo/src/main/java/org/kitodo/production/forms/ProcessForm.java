@@ -212,7 +212,7 @@ public class ProcessForm extends TemplateBaseForm {
         Stopwatch stopwatch = new Stopwatch(this.getClass(), process, "createProcessAsChild");
         if (Objects.nonNull(process)) {
             return stopwatch.stop(CREATE_PROCESS_PATH + "&templateId=" + process.getTemplateId() + "&projectId="
-                    + process.getTemplateId() + "&parentId=" + process.getId());
+                    + process.getProjectId() + "&parentId=" + process.getId());
         }
         return stopwatch.stop("processes");
     }
