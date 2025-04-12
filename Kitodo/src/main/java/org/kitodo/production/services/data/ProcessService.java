@@ -102,6 +102,7 @@ import org.kitodo.data.database.beans.Comment;
 import org.kitodo.data.database.beans.Folder;
 import org.kitodo.data.database.beans.ImportConfiguration;
 import org.kitodo.data.database.beans.Process;
+import org.kitodo.data.database.beans.ProcessTableDTO;
 import org.kitodo.data.database.beans.Project;
 import org.kitodo.data.database.beans.Property;
 import org.kitodo.data.database.beans.Role;
@@ -463,8 +464,106 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         query.restrictToProjects(projectIDs);
         query.defineSorting(SORT_FIELD_MAPPING.get(sortField), sortOrder);
         query.performIndexSearches();
-        return getByQuery(query.formQueryForAll(), query.getQueryParameters(), offset, limit);
+        List<Process> results = getByQuery(query.formQueryForAll(), query.getQueryParameters(), offset, limit);
+        List<ProcessTableDTO> dtoList = new ArrayList<>();
+        for (Process process : results) {
+            ProcessTableDTO dto = mapToProcessDto(process);
+            dtoList.add(dto);
+        }
+
+        return results;
     }
+
+    public List<ProcessTableDTO> loadDataAsDTO(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
+                                               boolean showClosedProcesses, boolean showInactiveProjects) throws DAOException {
+        List<Process> results = loadData(offset, limit, sortField, sortOrder, filters, showClosedProcesses, showInactiveProjects);
+        List<ProcessTableDTO> dtoList = new ArrayList<>();
+        for (Process process : results) {
+            ProcessTableDTO dto = mapToProcessDto(process);
+            dtoList.add(dto);
+        }
+        return dtoList;
+    }
+
+    private ProcessTableDTO mapToProcessDto(Process process) {
+        ProcessTableDTO dto = new ProcessTableDTO();
+        dto.setId(process.getId());
+        dto.setTitle(process.getTitle());
+        dto.setProgressCombined(process.getProgressCombined());
+        dto.setLastEditingUser(process.getLastEditingUser());
+        dto.setHasChildren(process.hasChildren());
+        dto.setTemplateId(process.getTemplate().getId());
+        dto.setProjectId(process.getProject().getId());
+        try {
+            dto.setCanCreateChildProcess(canCreateChildProcess(process));
+        } catch (DAOException | IOException e) {
+            throw new RuntimeException(e);
+        }
+        List<String> commentMessages = new ArrayList<>();
+        int correctionStatus = 0;
+        String lastComment = "";
+        List<Comment> comments = process.getComments();
+        if (!comments.isEmpty()) {
+            Comment last = comments.get(comments.size() - 1);
+            lastComment = last.getMessage();
+        }
+
+        for (Comment comment : comments) {
+            boolean isError = "ERROR".equals(comment.getType());
+
+            // Build comment message
+            StringBuilder sb = new StringBuilder();
+            if (isError) {
+                sb.append("[!]");
+            }
+            sb.append(" ")
+                    .append(comment.getCreationDate())
+                    .append(" - ")
+                    .append(comment.getAuthor().getFullName())
+                    .append(": ")
+                    .append(comment.getMessage());
+            commentMessages.add(sb.toString());
+
+            // Determine correction status
+            if (isError) {
+                if (comment.isCorrected()) {
+                    correctionStatus = Math.max(correctionStatus, 1);
+                } else {
+                    correctionStatus = 2;
+                    break; // Highest severity reached
+                }
+            }
+        }
+
+        dto.setCorrectionCommentStatus(correctionStatus);
+        dto.setCommentMessages(commentMessages);
+        dto.setLastComment(lastComment);
+        dto.setHasComments(!commentMessages.isEmpty());
+        dto.setProjectTitle(process.getProject().getTitle());
+        dto.setProgressClosed(process.getProgressClosed());
+        dto.setProgressOpen(process.getProgressOpen());
+        dto.setProgressInProcessing(process.getProgressInProcessing());
+        dto.setCurrentTaskTitles(createProgressTooltip(process));
+        List<ProcessTableDTO.CurrentTaskInfo> taskInfoList = new ArrayList<>();
+        List<Task> tasks = getCurrentTasksForUser(process, ServiceManager.getUserService().getCurrentUser());
+
+        for (Task task : tasks) {
+            ProcessTableDTO.CurrentTaskInfo info = new ProcessTableDTO.CurrentTaskInfo();
+            info.setId(task.getId());
+            info.setTitle(task.getTitle());
+            info.setStatus(task.getProcessingStatus().getTitle());
+            info.setBatchStep(task.isBatchStep());
+             if (task.getProcessingUser() != null) {
+                info.setProcessingUserId(task.getProcessingUser().getId());
+                info.setProcessingUserFullName(task.getProcessingUser().getFullName());
+            }
+            taskInfoList.add(info);
+        }
+        dto.setTasks(taskInfoList);
+        return dto;
+    }
+
+
 
     /**
      * Saves multiple processes in the database.

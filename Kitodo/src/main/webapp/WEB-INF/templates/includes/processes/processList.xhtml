@@ -54,10 +54,10 @@
             <p:column id="selectionColumn" styleClass="checkboxListColumn" selectionMode="multiple" resizable="false"/>
 
             <p:column styleClass="hierarchy-info">
-                <p:rowToggler rendered="#{process.getParentID() ne 0 or process.hasChildren() or ProcessForm.getCurrentTasksForUser(process).size() gt 0}"/>
-                <h:outputText rendered="#{process.getParentID() ne 0 and not process.hasChildren()}"><i class="fa fa-long-arrow-left" title="#{msgs.hierarchicalParents}"/></h:outputText>
-                <h:outputText rendered="#{process.getParentID() eq 0 and process.hasChildren()}"><i class="fa fa-long-arrow-right" title="#{msgs.hierarchicalChildren}"/></h:outputText>
-                <h:outputText rendered="#{process.getParentID() ne 0 and process.hasChildren()}"><i class="fa fa-exchange fa-rotate-90" title="#{msgs.hierarchicalBoth}"/></h:outputText>
+                <p:rowToggler rendered="#{process.getParentID() ne 0 or process.childrenPresent or process.tasks.size() gt 0}"/>
+                <h:outputText rendered="#{process.getParentID() ne 0 and not process.isChildrenPresent()}"><i class="fa fa-long-arrow-left" title="#{msgs.hierarchicalParents}"/></h:outputText>
+                <h:outputText rendered="#{process.getParentID() eq 0 and process.isChildrenPresent()}"><i class="fa fa-long-arrow-right" title="#{msgs.hierarchicalChildren}"/></h:outputText>
+                <h:outputText rendered="#{process.getParentID() ne 0 and process.isChildrenPresent()}"><i class="fa fa-exchange fa-rotate-90" title="#{msgs.hierarchicalBoth}"/></h:outputText>
             </p:column>
             <p:column id="idColumn"
                       width="70"
@@ -69,7 +69,7 @@
             </p:column>
             <p:column id="titleColumn"
                       headerText="#{msgs.processTitle}"
-                      sortBy="#{process.title.keyword}"
+                      sortBy="#{process.title}"
                       rendered="#{ProcessForm.showColumn('process.title')}">
                 <h:outputText value="#{process.title}"
                               title="#{process.title}"/>
@@ -115,21 +115,21 @@
                     <h:panelGroup styleClass="fa
                         #{process.correctionCommentStatus gt 0 ? 'fa-exclamation-circle correction' : 'fa-comment'}
                         #{process.correctionCommentStatus eq 1 ? 'corrected' : ''}"
-                                  rendered="#{process.hasComments()}"/>
-                    <h:outputText value="#{commentTooltipView.getLastComment(process)}"
-                                  rendered="#{ProcessForm.showLastComment() and process.hasComments()}"/>
+                                  rendered="#{process.hasComments}"/>
+                    <h:outputText value="#{process.lastComment}"
+                                  rendered="#{process.hasComments}"/>
                 </h:panelGroup>
-                <p:tooltip for="commentIcon" styleClass="comments" trackMouse="true" rendered="#{process.hasComments()}">
+                <p:tooltip for="commentIcon" styleClass="comments" trackMouse="true" rendered="#{process.hasComments}">
                     <ui:include src="/WEB-INF/templates/includes/base/commentTooltip.xhtml">
-                        <ui:param name="comments" value="#{commentTooltipView.getComments(process)}"/>
+                        <ui:param name="comments" value="#{process.commentMessages}"/>
                     </ui:include>
                 </p:tooltip>
             </p:column>
             <p:column headerText="#{msgs.project}"
-                      sortBy="#{process.project.title.keyword}"
+                      sortBy="#{process.projectTitle}"
                       rendered="#{ProcessForm.showColumn('process.project')}">
-                <h:outputText value="#{process.project.title}"
-                              title="#{process.project.title}"/>
+                <h:outputText value="#{process.projectTitle}"
+                              title="#{process.projectTitle}"/>
             </p:column>
             <p:column headerText="#{msgs.duration}"
                       sortBy="#{process.creationDate}"
@@ -211,45 +211,49 @@
                                      columnClasses="label, value">
                             <h:outputText value="#{msgs.hierarchicalChildren}:"/>
                             <h:panelGroup>
-                                <h:outputText value="#{ProcessForm.getNumberOfChildProcesses(process.getId())} " rendered="#{process.hasChildren()}"/>
+                                <h:outputText value="#{ProcessForm.getNumberOfChildProcesses(process.getId())} " rendered="#{process.isChildrenPresent()}"/>
                                 <p:commandLink value="#{msgs.show}"
                                                action="#{ProcessForm.changeFilter('parentprocessid:'.concat(process.getId()))}"
-                                               rendered="#{process.hasChildren()}"/>
-                                <h:outputText value=" #{msgs.none}" rendered="#{not process.hasChildren()}"/>
+                                               rendered="#{process.isChildrenPresent()}"/>
+                                <h:outputText value=" #{msgs.none}" rendered="#{not process.isChildrenPresent()}"/>
                             </h:panelGroup>
                         </p:panelGrid>
                     </p:panelGrid>
-                    <p:panel header="#{msgs.tasks}:" rendered="#{ProcessForm.getCurrentTasksForUser(process).size() gt 0}">
-                        <p:dataList value="#{ProcessForm.getCurrentTasksForUser(process)}" var="task">
+                    <p:panel header="#{msgs.tasks}:" rendered="#{process.tasks gt 0}">
+                        <p:dataList value="#{process.tasks}" var="task">
                             <h:outputText value="#{task.title}"/>
-                                <!-- assign task -->
-                                <h:commandLink id="take"
-                                               action="#{CurrentTaskForm.takeOverTask}"
-                                               styleClass="action"
-                                               rendered="#{(task.processingStatus == 'OPEN' and !task.batchStep) || (task.processingStatus == 'OPEN' and task.batchStep and !task.batchAvailable)}"
-                                               title="#{msgs.selfAssignTask}">
-                                    <h:outputText><i class="fa fa-bell-o"/></h:outputText>
-                                    <f:setPropertyActionListener value="#{task.id}" target="#{CurrentTaskForm.taskById}"/>
-                                </h:commandLink>
-                                <!-- already assigned task (this user) -->
-                                <h:commandLink id="editOwnTask"
-                                               action="#{CurrentTaskForm.editTask}"
-                                               styleClass="action"
-                                               rendered="#{(task.processingStatus == 'INWORK' and task.processingUser.id == LoginForm.loggedUser.id and !task.batchStep) || (task.processingStatus == 'INWORK' and task.processingUser.id == LoginForm.loggedUser.id and task.batchStep and !task.batchAvailable)}"
-                                               title="#{msgs.assignedTo}: #{task.processingUser!=null and task.processingUser.id!=0 ? task.processingUser.fullName:''}">
-                                    <h:outputText><i class="fa fa-bell"/></h:outputText>
-                                    <f:setPropertyActionListener value="#{task.id}" target="#{CurrentTaskForm.taskById}"/>
-                                </h:commandLink>
-                                <!-- already assigned task (different user) -->
-                                <h:commandLink id="editOtherTask"
-                                               action="#{CurrentTaskForm.editTask}"
-                                               styleClass="action"
-                                               rendered="#{task.processingStatus == 'INWORK' and task.processingUser.id != LoginForm.loggedUser.id and (!task.batchStep || !task.batchAvailable)}"
-                                               title="#{msgs.assignedTo}: #{(task.processingUser!=null and task.processingUser.id!=0 ? task.processingUser.fullName : '')}">
-                                    <h:outputText><i class="fa fa-bell-slash"/></h:outputText>
-                                    <f:setPropertyActionListener value="#{task.id}" target="#{CurrentTaskForm.taskById}"/>
-                                </h:commandLink>
+
+                            <!-- Assign -->
+                            <h:commandLink id="take"
+                                           action="#{CurrentTaskForm.takeOverTask}"
+                                           styleClass="action"
+                                           rendered="#{(task.status == 'OPEN' and !task.batchStep) or (task.status == 'OPEN' and task.batchStep and !task.batchAvailable)}"
+                                           title="#{msgs.selfAssignTask}">
+                                <h:outputText><i class="fa fa-bell-o"/></h:outputText>
+                                <f:setPropertyActionListener value="#{task.id}" target="#{CurrentTaskForm.taskById}"/>
+                            </h:commandLink>
+
+                            <!-- Edit own -->
+                            <h:commandLink id="editOwnTask"
+                                           action="#{CurrentTaskForm.editTask}"
+                                           styleClass="action"
+                                           rendered="#{(task.status == 'INWORK' and task.processingUserId == LoginForm.loggedUser.id and !task.batchStep) or (task.status == 'INWORK' and task.processingUserId == LoginForm.loggedUser.id and task.batchStep and !task.batchAvailable)}"
+                                           title="#{msgs.assignedTo}: #{task.processingUserFullName}">
+                                <h:outputText><i class="fa fa-bell"/></h:outputText>
+                                <f:setPropertyActionListener value="#{task.id}" target="#{CurrentTaskForm.taskById}"/>
+                            </h:commandLink>
+
+                            <!-- Edit others -->
+                            <h:commandLink id="editOtherTask"
+                                           action="#{CurrentTaskForm.editTask}"
+                                           styleClass="action"
+                                           rendered="#{task.status == 'INWORK' and task.processingUserId != LoginForm.loggedUser.id and (!task.batchStep or !task.batchAvailable)}"
+                                           title="#{msgs.assignedTo}: #{task.processingUserFullName}">
+                                <h:outputText><i class="fa fa-bell-slash"/></h:outputText>
+                                <f:setPropertyActionListener value="#{task.id}" target="#{CurrentTaskForm.taskById}"/>
+                            </h:commandLink>
                         </p:dataList>
+
                     </p:panel>
                 </div>
             </p:rowExpansion>
