@@ -381,7 +381,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
 
     @Override
     public List<Process> loadData(int first, int pageSize, String sortField,
-            org.primefaces.model.SortOrder sortOrder, Map<?, String> filters) throws DAOException {
+            SortOrder sortOrder, Map<?, String> filters) throws DAOException {
         return loadData(first, pageSize, sortField, sortOrder, filters, false, false);
     }
 
@@ -495,8 +495,8 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         dto.setTemplateId(process.getTemplate().getId());
         dto.setProjectId(process.getProject().getId());
         try {
-           // dto.setCanBeExported(canBeExported(process.getId()));
-            dto.setCanCreateChildProcess(canCreateChildProcess(process));
+           dto.setCanBeExported(canBeExported(process));
+           dto.setCanCreateChildProcess(canCreateChildProcess(process));
         } catch (DAOException | IOException e) {
             throw new RuntimeException(e);
         }
@@ -1781,7 +1781,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             }
             String metadataFile;
             try (InputStream inputStream = ServiceManager.getFileService().readMetadataFile(process, forIndexingAll)) {
-                metadataFile = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+                metadataFile = IOUtils.toString(inputStream, UTF_8);
             }
             JSONObject xmlJSONObject = XML.toJSONObject(metadataFile);
             Map<String, Object> json = iterateOverJsonObject(xmlJSONObject);
@@ -2378,7 +2378,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         ChartData data = new ChartData();
         data.addChartDataSet(dataSet);
         ArrayList<String> labels = new ArrayList<>();
-        for (Map.Entry<String, Integer> processValueEntry : processValues.entrySet()) {
+        for (Entry<String, Integer> processValueEntry : processValues.entrySet()) {
             labels.add(processValueEntry.getKey().concat(" ").concat(processValueEntry.getValue().toString()));
         }
         data.setLabels(labels);
@@ -2495,11 +2495,9 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
 
     /**
      * Checks and returns whether the process with the given ID 'processId' can be exported or not.
-     * @param processId process ID
      * @return whether process can be exported or not
      */
-    public static boolean canBeExported(int processId) throws IOException, DAOException {
-        Process process = ServiceManager.getProcessService().getById(processId);
+    public static boolean canBeExported(Process process) throws IOException, DAOException {
         // superordinate processes normally do not contain images but should always be exportable
         if (!process.getChildren().isEmpty()) {
             return true;
