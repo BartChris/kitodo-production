@@ -495,6 +495,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         dto.setTemplateId(process.getTemplate().getId());
         dto.setProjectId(process.getProject().getId());
         try {
+           // dto.setCanBeExported(canBeExported(process.getId()));
             dto.setCanCreateChildProcess(canCreateChildProcess(process));
         } catch (DAOException | IOException e) {
             throw new RuntimeException(e);
@@ -559,6 +560,18 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             }
             taskInfoList.add(info);
         }
+        List<ProcessTableDTO.ParentProcessInfo> parentProcessInfos = new ArrayList<>();
+        List<Process> parents = getAllParentProcesses(process);
+        for (Process parent : parents) {
+            ProcessTableDTO.ParentProcessInfo info = new ProcessTableDTO.ParentProcessInfo();
+            info.setId(parent.getId());
+            info.setTitle(parent.getTitle());
+            info.setInAssignedProject(ServiceManager.getUserService().getCurrentUser().getProjects().contains(process.getProject()));
+            parentProcessInfos.add(info);
+        }
+        dto.setParentProcesses(parentProcessInfos);
+
+
         dto.setTasks(taskInfoList);
         return dto;
     }

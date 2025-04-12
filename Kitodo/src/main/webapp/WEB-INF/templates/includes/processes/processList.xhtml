@@ -25,7 +25,6 @@
                      var="process"
                      value="#{ProcessForm.lazyBeanModel}"
                      first="#{ProcessForm.firstRow}"
-                     selection="#{ProcessForm.selectedProcesses}"
                      lazy="true"
                      paginator="true"
                      resizableColumns="true"
@@ -54,10 +53,10 @@
             <p:column id="selectionColumn" styleClass="checkboxListColumn" selectionMode="multiple" resizable="false"/>
 
             <p:column styleClass="hierarchy-info">
-                <p:rowToggler rendered="#{process.getParentID() ne 0 or process.childrenPresent or process.tasks.size() gt 0}"/>
-                <h:outputText rendered="#{process.getParentID() ne 0 and not process.isChildrenPresent()}"><i class="fa fa-long-arrow-left" title="#{msgs.hierarchicalParents}"/></h:outputText>
-                <h:outputText rendered="#{process.getParentID() eq 0 and process.isChildrenPresent()}"><i class="fa fa-long-arrow-right" title="#{msgs.hierarchicalChildren}"/></h:outputText>
-                <h:outputText rendered="#{process.getParentID() ne 0 and process.isChildrenPresent()}"><i class="fa fa-exchange fa-rotate-90" title="#{msgs.hierarchicalBoth}"/></h:outputText>
+                <p:rowToggler rendered="#{process.hasChildren}"/>
+                <h:outputText rendered="#{process.hasChildren}"><i class="fa fa-long-arrow-left" title="#{msgs.hierarchicalParents}"/></h:outputText>
+                <h:outputText rendered="#{process.hasChildren}"><i class="fa fa-long-arrow-right" title="#{msgs.hierarchicalChildren}"/></h:outputText>
+                <h:outputText rendered="#{process.hasChildren}"><i class="fa fa-exchange fa-rotate-90" title="#{msgs.hierarchicalBoth}"/></h:outputText>
             </p:column>
             <p:column id="idColumn"
                       width="70"
@@ -139,13 +138,13 @@
                               title="#{ProcessForm.getProcessDuration(process)}"/>
             </p:column>
             <!-- columns for process properties that have been configured in kitodo config file! -->
-            <p:columns value="#{ProcessForm.getProcessPropertyNames()}"
+            <!--<p:columns value="#{ProcessForm.getProcessPropertyNames()}"
                        var="propertyName"
                        headerText="#{fn:replace(propertyName, 'process.', '')}"
                        rendered="#{ProcessForm.showColumn(propertyName)}">
                 <h:outputText value="#{ProcessForm.getPropertyValue(process, fn:replace(propertyName, 'process.', ''))}"
                               title="#{ProcessForm.getPropertyValue(process, fn:replace(propertyName, 'process.', ''))}"/>
-            </p:columns>
+            </p:columns>-->
 
             <ui:include src="/WEB-INF/templates/includes/processes/processActionsColumn.xhtml">
                 <ui:param name="ProcessListView" value="#{ProcessForm}"/>
@@ -162,28 +161,27 @@
                                      columnClasses="label, value">
                             <h:outputText value="#{msgs.hierarchicalParents}:"/>
                             <p:dataTable var="parent"
-                                         value="#{ProcessForm.getAllParentProcesses(process.id)}"
-                                         rendered="#{process.getParentID() ne 0}">
+                                         value="#{process.parentProcesses}"
+                                         rendered="#{process.parentProcesses != null and not empty process.parentProcesses}">
                                 <p:column>
-                                    <h:outputText value="#{parent.getTitle()} "
-                                                  title="#{parent.getTitle()}"/>
+                                    <h:outputText value="#{parent.title}" title="#{parent.title}"/>
                                     <p:commandLink value="#{msgs.show}"
-                                                   action="#{ProcessForm.changeFilter('id:'.concat(parent.getId()))}"/>
+                                                   action="#{ProcessForm.changeFilter('id:'.concat(parent.id))}"/>
                                 </p:column>
                                 <p:column styleClass="actionsColumn">
                                     <h:link outcome="processEdit"
-                                            styleClass="#{not ProcessForm.processInAssignedProject(parent.id) ? 'ui-state-disabled action' : 'action'}"
+                                            styleClass="#{not parent.inAssignedProject ? 'ui-state-disabled action' : 'action'}"
                                             title="#{msgs.view}"
-                                            disabled="#{not ProcessForm.processInAssignedProject(parent.id)}"
+                                            disabled="#{not parent.inAssignedProject}"
                                             rendered="#{SecurityAccessController.hasAuthorityToViewProcess() and not SecurityAccessController.hasAuthorityToEditProcess()}">
                                         <i class="fa fa-eye fa-lg"/>
                                         <f:param name="referer" value="processes"/>
                                         <f:param name="id" value="#{parent.id}"/>
                                     </h:link>
                                     <h:link outcome="processEdit"
-                                            styleClass="#{not ProcessForm.processInAssignedProject(parent.id) ? 'ui-state-disabled action' : 'action'}"
+                                            styleClass="#{not parent.inAssignedProject ? 'ui-state-disabled action' : 'action'}"
                                             title="#{msgs.edit}"
-                                            disabled="#{not ProcessForm.processInAssignedProject(parent.id)}"
+                                            disabled="#{not parent.inAssignedProject}"
                                             rendered="#{SecurityAccessController.hasAuthorityToEditProcess()}">
                                         <i class="fa fa-pencil-square-o fa-lg"/>
                                         <f:param name="referer" value="processes"/>
@@ -193,8 +191,8 @@
                                                   title="#{MetadataLock.isLocked(parent.id) ? msgs['blocked'].concat(MetadataLock.getLockUser(parent.id).fullName) : msgs['metadataEdit']}">
                                         <h:link id="editMetadata"
                                                 outcome="metadataEditor"
-                                                disabled="#{MetadataLock.isLocked(parent.id) or not ProcessForm.processInAssignedProject(parent.id)}"
-                                                styleClass="#{MetadataLock.isLocked(parent.id) or not ProcessForm.processInAssignedProject(parent.id) ? 'ui-state-disabled' : ''}"
+                                                disabled="#{false or not parent.inAssignedProject}"
+                                                styleClass="#{false or not parent.inAssignedProject ? 'ui-state-disabled' : ''}"
                                                 rendered="#{SecurityAccessController.hasAuthorityToOpenMetadataEditor()}">
                                             <h:outputText><i class="fa fa-list-alt fa-lg"/></h:outputText>
                                             <f:param name="id" value="#{parent.id}"/>
@@ -203,7 +201,8 @@
                                     </h:panelGroup>
                                 </p:column>
                             </p:dataTable>
-                            <h:outputText value="#{msgs.none}" rendered="#{process.getParentID() eq 0}"/>
+
+                            <h:outputText value="#{msgs.none}"/>
                         </p:panelGrid>
                         <p:panelGrid id="processChildrenTable"
                                      styleClass="expansion-column"
@@ -211,11 +210,11 @@
                                      columnClasses="label, value">
                             <h:outputText value="#{msgs.hierarchicalChildren}:"/>
                             <h:panelGroup>
-                                <h:outputText value="#{ProcessForm.getNumberOfChildProcesses(process.getId())} " rendered="#{process.isChildrenPresent()}"/>
+                                <h:outputText value="0" rendered="#{false}"/>
                                 <p:commandLink value="#{msgs.show}"
-                                               action="#{ProcessForm.changeFilter('parentprocessid:'.concat(process.getId()))}"
-                                               rendered="#{process.isChildrenPresent()}"/>
-                                <h:outputText value=" #{msgs.none}" rendered="#{not process.isChildrenPresent()}"/>
+                                               action="#{ProcessForm.changeFilter('parentprocessid:'.concat(process.id))}"
+                                               rendered="#{process.hasChildren}"/>
+                                <h:outputText value=" #{msgs.none}" rendered="#{not process.hasChildren}"/>
                             </h:panelGroup>
                         </p:panelGrid>
                     </p:panelGrid>

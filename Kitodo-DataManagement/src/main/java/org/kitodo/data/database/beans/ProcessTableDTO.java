@@ -19,7 +19,9 @@ public class ProcessTableDTO {
     private String lastComment;
     private String currentTaskTitles;
     private List<CurrentTaskInfo> tasks;
+    private List<ParentProcessInfo> parentProcesses;
     private boolean canCreateChildProcess;
+    private boolean canBeExported;
 
     private Double progressClosed;
 
@@ -28,6 +30,14 @@ public class ProcessTableDTO {
     private boolean canCreateProcessWithCalendar;
     private int templateId;
     private int projectId;
+
+    public boolean getCanBeExported() {
+        return canBeExported;
+    }
+
+    public void setCanBeExported(boolean canBeExported) {
+        this.canBeExported = canBeExported;
+    }
 
     public int getTemplateId() {
         return templateId;
@@ -138,9 +148,6 @@ public class ProcessTableDTO {
     public boolean getHasChildren() {
         return hasChildren;
     }
-    public boolean isChildrenPresent() {
-        return hasChildren;
-    }
 
     public void setHasChildren(boolean hasChildren) {
         this.hasChildren = hasChildren;
@@ -170,6 +177,14 @@ public class ProcessTableDTO {
         return commentMessages;
     }
 
+    public List<ParentProcessInfo> getParentProcesses() {
+        return parentProcesses;
+    }
+
+    public void setParentProcesses(List<ParentProcessInfo> parentProcessInfos) {
+        this.parentProcesses = parentProcessInfos;
+    }
+
     public List<CurrentTaskInfo> getTasks() {
         return tasks;
     }
@@ -189,6 +204,39 @@ public class ProcessTableDTO {
     public void setProgressCombined(String progressCombined) {
         this.progressCombined = progressCombined;
     }
+
+    public static class ParentProcessInfo {
+        private int id;
+        private String title;
+        private boolean inAssignedProject;
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public void setTitle(String title) {
+            this.title = title;
+        }
+
+        public boolean getInAssignedProject() {
+            return inAssignedProject;
+        }
+
+        public void setInAssignedProject(boolean inAssignedProject) {
+            this.inAssignedProject = inAssignedProject;
+        }
+    }
+
+
+
 
     public static class CurrentTaskInfo {
         private int id;
