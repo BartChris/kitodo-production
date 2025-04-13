@@ -119,8 +119,7 @@
                            rendered="#{SecurityAccessController.hasAuthorityToViewDocket()}">
                 <h:outputText><i class="fa fa-print fa-lg"/></h:outputText>
             </p:commandLink>
-
-            <!--<h:commandLink action="#{ProcessListView.exportMets(process.id)}"
+            <h:commandLink action="#{ProcessListView.exportMets(process.id)}"
                            id="exportMets"
                            styleClass="action #{process.canBeExported ? '' : 'disabled'}"
                            disabled="#{not process.canBeExported}"
@@ -135,7 +134,7 @@
                            title="#{process.canBeExported ? msgs.exportDMS : msgs.exportUnavailableNoImages} "
                            rendered="#{SecurityAccessController.hasAuthorityToExportProcess()}">
                 <h:outputText><i class="fa fa-file-archive-o fa-lg"/></h:outputText>
-            </h:commandLink>-->
+            </h:commandLink>
             <h:panelGroup styleClass="action"
                           title="#{process.hasChildren ? msgs.processNotDeletableWithChildren : msgs.delete}">
                 <p:commandLink id="deleteProcess"
