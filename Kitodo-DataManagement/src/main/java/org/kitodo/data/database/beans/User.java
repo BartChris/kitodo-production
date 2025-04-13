@@ -15,16 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.ForeignKey;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 import org.kitodo.data.database.persistence.UserDAO;
 
@@ -117,7 +108,7 @@ public class User extends BaseBean {
     @Column(name = "show_physical_page_number_below_thumbnail")
     private boolean showPhysicalPageNumberBelowThumbnail;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "default_client_id", foreignKey = @ForeignKey(name = "FK_user_default_client_id"))
     private Client defaultClient;
 

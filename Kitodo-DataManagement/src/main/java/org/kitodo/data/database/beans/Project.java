@@ -104,8 +104,10 @@ public class Project extends BaseBean implements Comparable<Project> {
     @Transient
     private boolean hasProcesses;
 
-    @ManyToMany(mappedBy = "projects", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
+    @LazyCollection(LazyCollectionOption.FALSE)
+    @ManyToMany(mappedBy = "projects", cascade = CascadeType.PERSIST)
     private List<Template> templates;
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "default_importconfiguration_id",
