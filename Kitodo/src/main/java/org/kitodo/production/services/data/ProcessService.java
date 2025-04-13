@@ -385,6 +385,11 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         return loadData(first, pageSize, sortField, sortOrder, filters, false, false);
     }
 
+    public List<ProcessTableDTO> loadDataAsDTO(int first, int pageSize, String sortField,
+                                  SortOrder sortOrder, Map<?, String> filters) throws DAOException {
+        return loadDataAsDTO(first, pageSize, sortField, sortOrder, filters, false, false);
+    }
+
     /**
      * Provides a window onto the process objects. This makes it possible to
      * navigate through the processes page by page, without having to load all

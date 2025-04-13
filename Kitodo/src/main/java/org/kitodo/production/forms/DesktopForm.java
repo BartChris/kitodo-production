@@ -23,6 +23,7 @@ import javax.json.JsonException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kitodo.data.database.beans.Process;
+import org.kitodo.data.database.beans.ProcessTableDTO;
 import org.kitodo.data.database.beans.Project;
 import org.kitodo.data.database.beans.Task;
 import org.kitodo.data.database.exceptions.DAOException;
@@ -42,7 +43,7 @@ public class DesktopForm extends BaseForm {
     private static final String SORT_TITLE = "title";
     private static final String SORT_ID = "id";
     private List<Task> taskList = new ArrayList<>();
-    private List<Process> processList = new ArrayList<>();
+    private List<ProcessTableDTO> processList = new ArrayList<>();
     private List<Project> projectList = new ArrayList<>();
 
     /**
@@ -93,10 +94,10 @@ public class DesktopForm extends BaseForm {
      *
      * @return process list
      */
-    public List<Process> getProcesses() {
+    public List<ProcessTableDTO> getProcesses() {
         try {
             if (ServiceManager.getSecurityAccessService().hasAuthorityToViewProcessList() && processList.isEmpty()) {
-                processList = ServiceManager.getProcessService().loadData(0, 10, SORT_ID, SortOrder.DESCENDING, null);
+                processList = ServiceManager.getProcessService().loadDataAsDTO(0, 10, SORT_ID, SortOrder.DESCENDING, null);
             }
         } catch (DAOException | JsonException e) {
             Helper.setErrorMessage(ERROR_LOADING_MANY, new Object[] {ObjectType.PROCESS.getTranslationPlural() },

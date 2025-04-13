@@ -153,7 +153,7 @@ public class ProcessTableDTO {
         this.hasChildren = hasChildren;
     }
 
-    public boolean isHasComments() {
+    public boolean getHasComments() {
         return hasComments;
     }
 

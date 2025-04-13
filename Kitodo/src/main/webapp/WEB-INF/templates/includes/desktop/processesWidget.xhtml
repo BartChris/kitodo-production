@@ -16,6 +16,7 @@
         xmlns:h="http://xmlns.jcp.org/jsf/html"
         xmlns:p="http://primefaces.org/ui"
         xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+    <!--@elvariable id="process" type="org.kitodo.production.dto.ProcessDTO"-->
     <p:dataTable id="processTable"
                  value="#{DesktopForm.processes}"
                  scrollable="true"
@@ -42,19 +43,19 @@
                 <h:panelGroup styleClass="fa
                     #{DesktopForm.hasCorrectionTask(process.id) gt 0 ? 'fa-exclamation-circle correction' : 'fa-comment'}
                     #{DesktopForm.hasCorrectionTask(process.id) eq 1 ? 'corrected' : ''}"
-                              rendered="#{process.hasComments()}"/>
+                              rendered="#{process.hasComments}"/>
             </h:panelGroup>
             <p:tooltip for="commentIcon" styleClass="comments" trackMouse="true">
                 <ui:include src="/WEB-INF/templates/includes/base/commentTooltip.xhtml">
-                    <ui:param name="comments" value="#{commentTooltipView.getComments(process)}"/>
+                    <ui:param name="comments" value="#{process.commentMessages}"/>
                 </ui:include>
             </p:tooltip>
 
         </p:column>
 
         <p:column headerText="#{msgs.project}">
-            <h:outputText title="#{process.project.title}"
-                          value="#{process.project.title}"/>
+            <h:outputText title="#{process.projectTitle}"
+                          value="#{process.projectTitle}"/>
         </p:column>
         <p:column headerText="#{msgs.actions}" styleClass="actionsColumn">
             <h:form id="actionForm">
@@ -99,12 +100,12 @@
                     <h:outputText><i class="fa fa-file-code-o"/></h:outputText>
                 </p:commandLink>
                 <h:panelGroup styleClass="action"
-                              title="#{process.hasChildren() ? msgs.processNotDeletableWithChildren : msgs.delete}">
+                              title="#{process.hasChildren ? msgs.processNotDeletableWithChildren : msgs.delete}">
                     <p:commandLink id="deleteProcess"
                                    action="#{DesktopForm.deleteProcess(process.id)}"
-                                   title="#{ process.hasChildren() ? msgs.processNotDeletableWithChildren : msgs.delete}"
+                                   title="#{ process.hasChildren ? msgs.processNotDeletableWithChildren : msgs.delete}"
                                    rendered="#{SecurityAccessController.hasAuthorityToDeleteProcess()}"
-                                   disabled="#{process.hasChildren()}"
+                                   disabled="#{process.hasChildren}"
                                    update="processTable">
                         <h:outputText><i class="fa fa-trash-o"/></h:outputText>
                         <p:confirm header="#{msgs.confirmDelete}"
