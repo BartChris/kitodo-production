@@ -83,6 +83,7 @@ import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.hibernate.LazyInitializationException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.XML;
@@ -473,16 +474,79 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         return getByQuery(query.formQueryForAll(), query.getQueryParameters(), offset, limit);
     }
 
+    public List<Integer> loadDataInt(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
+                                     boolean showClosedProcesses, boolean showInactiveProjects) throws DAOException {
+        BeanQuery query = new BeanQuery(Process.class);
+        query.restrictToClient(ServiceManager.getUserService().getSessionClientId());
+        if (Objects.nonNull(filters)) {
+            Iterator<? extends Entry<?, String>> filtersIterator = filters.entrySet().iterator();
+            if (filtersIterator.hasNext()) {
+                String filterString = filtersIterator.next().getValue();
+                if (StringUtils.isNotBlank(filterString)) {
+                    query.restrictWithUserFilterString(filterString);
+                }
+            }
+        }
+        if (!showClosedProcesses) {
+            query.restrictToNotCompletedProcesses();
+        }
+        Collection<Integer> projectIDs = ServiceManager.getUserService().getCurrentUser().getProjects().stream()
+                .filter(project -> showInactiveProjects || project.isActive()).map(Project::getId)
+                .collect(Collectors.toList());
+        query.restrictToProjects(projectIDs);
+        query.defineSorting(SORT_FIELD_MAPPING.get(sortField), sortOrder);
+        query.performIndexSearches();
+        // Get base query (starts with FROM Process AS process ...)
+        String baseQuery = query.formQueryForAll();
+
+        // Insert SELECT process.id in front of the FROM
+        String idQuery = "SELECT process.id " + baseQuery;
+        return getIdsByQuery(idQuery, query.getQueryParameters(), offset, limit);
+    }
+
+
+
     public List<ProcessTableDTO> loadDataAsDTO(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
                                                boolean showClosedProcesses, boolean showInactiveProjects) throws DAOException {
-        List<Process> results = loadData(offset, limit, sortField, sortOrder, filters, showClosedProcesses, showInactiveProjects);
+        List<Integer> results = loadDataInt(offset, limit, sortField, sortOrder, filters, showClosedProcesses, showInactiveProjects);
+        List<Process> processdata = fetchFullProcesses(results);
         List<ProcessTableDTO> dtoList = new ArrayList<>();
-        for (Process process : results) {
+        for (Process process : processdata) {
             ProcessTableDTO dto = mapToProcessDto(process);
             dtoList.add(dto);
         }
         return dtoList;
     }
+
+    public List<Process> fetchFullProcesses(List<Integer> ids) {
+        if (ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Load project/template/comments
+        String hql1 = "SELECT DISTINCT p " +
+                "FROM Process p " +
+                "LEFT JOIN FETCH p.project " +
+                "LEFT JOIN FETCH p.template " +
+                "LEFT JOIN FETCH p.comments c " +
+                "LEFT JOIN FETCH c.author " +
+                "WHERE p.id IN (:ids)";
+        dao.getByQuery(hql1, Map.of("ids", ids), 0, ids.size());
+
+        // Load tasks and processing users
+        String hql2 = "SELECT DISTINCT p " +
+                "FROM Process p " +
+                "LEFT JOIN FETCH p.tasks t " +
+                "LEFT JOIN FETCH t.processingUser " +
+                "LEFT JOIN FETCH p.project " +      // Ensure project is fetched again here
+                "LEFT JOIN FETCH p.template " +     // And template, in case 1st query didn't hydrate
+                "WHERE p.id IN (:ids)";
+        List<Process> processes = dao.getByQuery(hql2, Map.of("ids", ids), 0, ids.size());
+
+        return processes; // ✅ Now returning the version that has everything
+    }
+
+
 
     private ProcessTableDTO mapToProcessDto(Process process) {
         ProcessTableDTO dto = new ProcessTableDTO();
@@ -494,8 +558,8 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         dto.setTemplateId(process.getTemplate().getId());
         dto.setProjectId(process.getProject().getId());
         try {
-           dto.setCanBeExported(canBeExported(process));
-           dto.setCanCreateChildProcess(canCreateChildProcess(process));
+            //dto.setCanBeExported(canBeExported(process));
+            dto.setCanCreateChildProcess(canCreateChildProcess(process));
         } catch (DAOException | IOException e) {
             throw new RuntimeException(e);
         }
@@ -516,10 +580,17 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             if (isError) {
                 sb.append("[!]");
             }
+            String name = "";
+            try {
+                name = comment.getAuthor().getFullName();
+               } catch (LazyInitializationException e) {
+                name = "[LAZY USER]";
+            }
+
             sb.append(" ")
                     .append(comment.getCreationDate())
                     .append(" - ")
-                    .append(comment.getAuthor().getFullName())
+                    .append(name)
                     .append(": ")
                     .append(comment.getMessage());
             commentMessages.add(sb.toString());
@@ -544,11 +615,8 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         dto.setProgressOpen(process.getProgressOpen());
         dto.setProgressInProcessing(process.getProgressInProcessing());
         dto.setCurrentTaskTitles(createProgressTooltip(process));
-        dto.setNumberOfChildren(process.getChildren().size());
-
         List<ProcessTableDTO.CurrentTaskInfo> taskInfoList = new ArrayList<>();
         List<Task> tasks = getCurrentTasksForUser(process, ServiceManager.getUserService().getCurrentUser());
-
 
         for (Task task : tasks) {
             ProcessTableDTO.CurrentTaskInfo info = new ProcessTableDTO.CurrentTaskInfo();
@@ -556,7 +624,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             info.setTitle(task.getTitle());
             info.setStatus(task.getProcessingStatus().getTitle());
             info.setBatchStep(task.isBatchStep());
-             if (task.getProcessingUser() != null) {
+            if (task.getProcessingUser() != null) {
                 info.setProcessingUserId(task.getProcessingUser().getId());
                 info.setProcessingUserFullName(task.getProcessingUser().getFullName());
             }
@@ -569,7 +637,6 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             info.setId(parent.getId());
             info.setTitle(parent.getTitle());
             info.setInAssignedProject(ServiceManager.getUserService().getCurrentUser().getProjects().contains(process.getProject()));
-            info.setLocked(MetadataLock.isLocked(parent.getId()));
             parentProcessInfos.add(info);
         }
         dto.setParentProcesses(parentProcessInfos);
@@ -578,7 +645,6 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         dto.setTasks(taskInfoList);
         return dto;
     }
-
 
 
     /**

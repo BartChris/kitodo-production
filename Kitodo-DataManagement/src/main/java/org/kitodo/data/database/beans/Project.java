@@ -95,17 +95,16 @@ public class Project extends BaseBean implements Comparable<Project> {
     @Column(name = "active")
     private Boolean active = true;
 
-    @ManyToMany(mappedBy = "projects", cascade = CascadeType.PERSIST)
+    @ManyToMany(mappedBy = "projects", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
     private List<User> users;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Process> processes;
 
     @Transient
     private boolean hasProcesses;
 
-    @LazyCollection(LazyCollectionOption.FALSE)
-    @ManyToMany(mappedBy = "projects", cascade = CascadeType.PERSIST)
+    @ManyToMany(mappedBy = "projects", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
     private List<Template> templates;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -118,78 +117,48 @@ public class Project extends BaseBean implements Comparable<Project> {
             foreignKey = @ForeignKey(name = "FK_project_default_child_process_importconfiguration_id"))
     private ImportConfiguration defaultChildProcessImportConfiguration;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Folder> folders;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", foreignKey = @ForeignKey(name = "FK_project_client_id"))
     private Client client;
 
-    /**
-     * Folder to use as source for generation of derived resources.
-     */
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "generatorSource_folder_id", foreignKey = @ForeignKey(name = "FK_project_generatorSource_folder_id"))
     private Folder generatorSource;
 
-    /**
-     * Folder with media to use for the viewer.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mediaView_folder_id", foreignKey = @ForeignKey(name = "FK_project_mediaView_folder_id"))
     private Folder mediaView;
 
-    /**
-     * Folder with media to use for the preview.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "preview_folder_id", foreignKey = @ForeignKey(name = "FK_project_preview_folder_id"))
     private Folder preview;
 
-    /**
-     * Field to define mode of hover in preview.
-     */
     @Column(name = "preview_hover_mode")
     @Enumerated(EnumType.STRING)
     private PreviewHoverMode previewHoverMode = PreviewHoverMode.OVERLAY;
 
-    /**
-     * Folder with media to use for the audio preview.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "preview_audio_folder_id", foreignKey = @ForeignKey(name = "FK_project_preview_audio_folder_id"))
     private Folder audioPreview;
 
-    /**
-     * Folder with media to use for the audio viewer.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mediaView_audio_folder_id", foreignKey = @ForeignKey(name = "FK_project_mediaView_audio_folder_id"))
     private Folder audioMediaView;
 
-    /**
-     * Field to define the status of the audio media view waveform.
-     */
     @Column(name = "mediaView_audio_waveform")
     private Boolean audioMediaViewWaveform = false;
 
-    /**
-     * Folder with media to use for the video preview.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "preview_video_folder_id", foreignKey = @ForeignKey(name = "FK_project_preview_video_folder_id"))
     private Folder videoPreview;
 
-    /**
-     * Folder with media to use for the video viewer.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mediaView_video_folder_id", foreignKey = @ForeignKey(name = "FK_project_mediaView_video_folder_id"))
     private Folder videoMediaView;
 
-    /**
-     * Filename length for renaming media files of processes in this project.
-     */
     @Column(name = "filename_length")
     private Integer filenameLength;
 

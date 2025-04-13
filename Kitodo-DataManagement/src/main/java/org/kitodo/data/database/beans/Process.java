@@ -75,15 +75,15 @@ public class Process extends BaseTemplateBean {
     @Column(name = "ordering")
     private Integer ordering;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "docket_id", foreignKey = @ForeignKey(name = "FK_process_docket_id"))
     private Docket docket;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", foreignKey = @ForeignKey(name = "FK_process_project_id"))
     private Project project;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ruleset_id", foreignKey = @ForeignKey(name = "FK_process_ruleset_id"))
     private Ruleset ruleset;
 
@@ -91,7 +91,7 @@ public class Process extends BaseTemplateBean {
     @JoinColumn(name = "template_id", foreignKey = @ForeignKey(name = "FK_process_template_id"))
     private Template template;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id", foreignKey = @ForeignKey(name = "FK_process_parent_id"))
     private Process parent;
 
@@ -101,42 +101,39 @@ public class Process extends BaseTemplateBean {
     @Transient
     private boolean hasChildren = true;
 
-    @OneToMany(mappedBy = "process", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "process", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("ordering")
     private List<Task> tasks;
 
-    @LazyCollection(LazyCollectionOption.FALSE)
-    @OneToMany(mappedBy = "process", cascade = CascadeType.PERSIST, orphanRemoval = true)
+    @OneToMany(mappedBy = "process", cascade = CascadeType.PERSIST, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Comment> comments;
 
-    @ManyToMany(cascade = CascadeType.ALL)
-    @JoinTable(name = "process_x_property", joinColumns = {
-        @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_process_x_property_process_id")) }, inverseJoinColumns = {
-            @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_process_x_property_property_id")) })
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinTable(name = "process_x_property",
+            joinColumns = @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_process_x_property_process_id")),
+            inverseJoinColumns = @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_process_x_property_property_id")))
     private List<Property> properties;
 
-    @ManyToMany(cascade = CascadeType.ALL)
-    @JoinTable(name = "template_x_property", joinColumns = {
-        @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_template_x_property_process_id")) }, inverseJoinColumns = {
-            @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_template_x_property_property_id")) })
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinTable(name = "template_x_property",
+            joinColumns = @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_template_x_property_process_id")),
+            inverseJoinColumns = @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_template_x_property_property_id")))
     private List<Property> templates;
 
-    @ManyToMany(cascade = CascadeType.ALL)
-    @JoinTable(name = "workpiece_x_property", joinColumns = {
-        @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_workpiece_x_property_process_id")) },
-            inverseJoinColumns = {
-                @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_workpiece_x_property_property_id")) })
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinTable(name = "workpiece_x_property",
+            joinColumns = @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_workpiece_x_property_process_id")),
+            inverseJoinColumns = @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_workpiece_x_property_property_id")))
     private List<Property> workpieces;
 
-    @LazyCollection(LazyCollectionOption.FALSE)
-    @ManyToMany(mappedBy = "processes")
+    @ManyToMany(mappedBy = "processes", fetch = FetchType.LAZY)
     private List<Batch> batches = new ArrayList<>();
 
     @Column(name = "exported")
     private boolean exported;
 
     @Column(name = "inChoiceListShown")
-    Boolean inChoiceListShown;
+    private Boolean inChoiceListShown;
 
     @Column(name = "ocrd_workflow_id")
     private String ocrdWorkflowId;
@@ -162,9 +159,10 @@ public class Process extends BaseTemplateBean {
     @Transient
     private transient ProcessKeywords processKeywords;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "import_configuration_id", foreignKey = @ForeignKey(name = "FK_process_import_configuration_id"))
     private ImportConfiguration importConfiguration;
+
 
     /**
      * Constructor.
@@ -183,7 +181,7 @@ public class Process extends BaseTemplateBean {
     @PostLoad
     @PostUpdate
     private void onPostLoad() {
-        this.hasChildren = CollectionUtils.isNotEmpty(children);
+        //this.hasChildren = CollectionUtils.isNotEmpty(children);
     }
 
     /**

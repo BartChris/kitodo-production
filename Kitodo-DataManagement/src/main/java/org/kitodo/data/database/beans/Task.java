@@ -118,34 +118,33 @@ public class Task extends BaseBean {
     @Column(name = "workflowId")
     private String workflowId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workflowCondition_id", foreignKey = @ForeignKey(name = "FK_task_workflowCondition_id"))
     private WorkflowCondition workflowCondition;
 
     /**
-     * This field contains information about user, which works on this task.
+     * User working on this task.
      */
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "FK_task_user_id"))
     private User processingUser;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "template_id", foreignKey = @ForeignKey(name = "FK_task_template_id"))
     private Template template;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_task_process_id"))
     private Process process;
 
     /**
-     * This field contains information about user's roles, which are allowed to
-     * work on this task.
+     * Roles allowed to work on this task.
      */
     @ManyToMany(cascade = CascadeType.PERSIST)
     @JoinTable(name = "task_x_role", joinColumns = {
-        @JoinColumn(name = "task_id", foreignKey = @ForeignKey(name = "FK_task_x_role_task_id")) }, inverseJoinColumns = {
+            @JoinColumn(name = "task_id", foreignKey = @ForeignKey(name = "FK_task_x_role_task_id")) }, inverseJoinColumns = {
             @JoinColumn(name = "role_id", foreignKey = @ForeignKey(name = "FK_task_x_user_role_id")) })
-    private List<Role> roles;
+    private List<Role> roles = new ArrayList<>();
 
     @Transient
     private String localizedTitle;
@@ -155,6 +154,7 @@ public class Task extends BaseBean {
 
     @Transient
     private String editTypeTitle;
+
 
     /**
      * Constructor.

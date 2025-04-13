@@ -245,6 +245,10 @@ public abstract class BaseBeanService<T extends BaseBean, S extends BaseDAO<T>> 
         return dao.getByQuery(query, parameters, begin, max);
     }
 
+    public List<Integer> getIdsByQuery(String query, Map<String, Object> parameters, int begin, int max) {
+        return dao.getIdsByQuery(query, parameters, begin, max);
+    }
+
     /**
      * Gets a set of objects based on a search query.
      *
