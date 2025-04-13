@@ -53,10 +53,10 @@
             <p:column id="selectionColumn" styleClass="checkboxListColumn" selectionMode="multiple" resizable="false"/>
 
             <p:column styleClass="hierarchy-info">
-                <p:rowToggler rendered="#{process.hasChildren}"/>
-                <h:outputText rendered="#{process.hasChildren}"><i class="fa fa-long-arrow-left" title="#{msgs.hierarchicalParents}"/></h:outputText>
-                <h:outputText rendered="#{process.hasChildren}"><i class="fa fa-long-arrow-right" title="#{msgs.hierarchicalChildren}"/></h:outputText>
-                <h:outputText rendered="#{process.hasChildren}"><i class="fa fa-exchange fa-rotate-90" title="#{msgs.hierarchicalBoth}"/></h:outputText>
+                <p:rowToggler rendered="#{not empty process.parentProcesses or process.hasChildren or process.tasks.size() gt 0 }"/>
+                <h:outputText rendered="#{not empty process.parentProcesses and process.hasChildren}"><i class="fa fa-long-arrow-left" title="#{msgs.hierarchicalParents}"/></h:outputText>
+                <h:outputText rendered="#{not empty process.parentProcesses and process.hasChildren}"><i class="fa fa-long-arrow-right" title="#{msgs.hierarchicalChildren}"/></h:outputText>
+                <h:outputText rendered="#{not empty process.parentProcesses and process.hasChildren}"><i class="fa fa-exchange fa-rotate-90" title="#{msgs.hierarchicalBoth}"/></h:outputText>
             </p:column>
             <p:column id="idColumn"
                       width="70"
@@ -116,7 +116,7 @@
                         #{process.correctionCommentStatus eq 1 ? 'corrected' : ''}"
                                   rendered="#{process.hasComments}"/>
                     <h:outputText value="#{process.lastComment}"
-                                  rendered="#{process.hasComments}"/>
+                                  rendered="#{ProcessForm.showLastComment() and process.hasComments}"/>
                 </h:panelGroup>
                 <p:tooltip for="commentIcon" styleClass="comments" trackMouse="true" rendered="#{process.hasComments}">
                     <ui:include src="/WEB-INF/templates/includes/base/commentTooltip.xhtml">
@@ -162,7 +162,7 @@
                             <h:outputText value="#{msgs.hierarchicalParents}:"/>
                             <p:dataTable var="parent"
                                          value="#{process.parentProcesses}"
-                                         rendered="#{process.parentProcesses != null and not empty process.parentProcesses}">
+                                         rendered="#{not empty process.parentProcesses}">
                                 <p:column>
                                     <h:outputText value="#{parent.title}" title="#{parent.title}"/>
                                     <p:commandLink value="#{msgs.show}"
@@ -191,8 +191,8 @@
                                                   title="#{MetadataLock.isLocked(parent.id) ? msgs['blocked'].concat(MetadataLock.getLockUser(parent.id).fullName) : msgs['metadataEdit']}">
                                         <h:link id="editMetadata"
                                                 outcome="metadataEditor"
-                                                disabled="#{false or not parent.inAssignedProject}"
-                                                styleClass="#{false or not parent.inAssignedProject ? 'ui-state-disabled' : ''}"
+                                                disabled="#{parent.locked or not parent.inAssignedProject}"
+                                                styleClass="#{parent.locked or not parent.inAssignedProject ? 'ui-state-disabled' : ''}"
                                                 rendered="#{SecurityAccessController.hasAuthorityToOpenMetadataEditor()}">
                                             <h:outputText><i class="fa fa-list-alt fa-lg"/></h:outputText>
                                             <f:param name="id" value="#{parent.id}"/>
@@ -210,7 +210,7 @@
                                      columnClasses="label, value">
                             <h:outputText value="#{msgs.hierarchicalChildren}:"/>
                             <h:panelGroup>
-                                <h:outputText value="0" rendered="#{false}"/>
+                                <h:outputText value="#{process.numberOfChildren} " rendered="#{process.hasChildren}"/>
                                 <p:commandLink value="#{msgs.show}"
                                                action="#{ProcessForm.changeFilter('parentprocessid:'.concat(process.id))}"
                                                rendered="#{process.hasChildren}"/>
@@ -218,7 +218,7 @@
                             </h:panelGroup>
                         </p:panelGrid>
                     </p:panelGrid>
-                    <p:panel header="#{msgs.tasks}:" rendered="#{process.tasks gt 0}">
+                    <p:panel header="#{msgs.tasks}:" rendered="#{not empty process.tasks}">
                         <p:dataList value="#{process.tasks}" var="task">
                             <h:outputText value="#{task.title}"/>
 

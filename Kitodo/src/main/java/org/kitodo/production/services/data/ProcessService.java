@@ -129,6 +129,7 @@ import org.kitodo.production.helper.metadata.legacytypeimplementations.LegacyMet
 import org.kitodo.production.helper.metadata.legacytypeimplementations.LegacyMetsModsDigitalDocumentHelper;
 import org.kitodo.production.helper.metadata.legacytypeimplementations.LegacyPrefsHelper;
 import org.kitodo.production.metadata.MetadataEditor;
+import org.kitodo.production.metadata.MetadataLock;
 import org.kitodo.production.metadata.copier.CopierData;
 import org.kitodo.production.metadata.copier.DataCopier;
 import org.kitodo.production.services.ServiceManager;
@@ -543,8 +544,11 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         dto.setProgressOpen(process.getProgressOpen());
         dto.setProgressInProcessing(process.getProgressInProcessing());
         dto.setCurrentTaskTitles(createProgressTooltip(process));
+        dto.setNumberOfChildren(process.getChildren().size());
+
         List<ProcessTableDTO.CurrentTaskInfo> taskInfoList = new ArrayList<>();
         List<Task> tasks = getCurrentTasksForUser(process, ServiceManager.getUserService().getCurrentUser());
+
 
         for (Task task : tasks) {
             ProcessTableDTO.CurrentTaskInfo info = new ProcessTableDTO.CurrentTaskInfo();
@@ -565,6 +569,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             info.setId(parent.getId());
             info.setTitle(parent.getTitle());
             info.setInAssignedProject(ServiceManager.getUserService().getCurrentUser().getProjects().contains(process.getProject()));
+            info.setLocked(MetadataLock.isLocked(parent.getId()));
             parentProcessInfos.add(info);
         }
         dto.setParentProcesses(parentProcessInfos);

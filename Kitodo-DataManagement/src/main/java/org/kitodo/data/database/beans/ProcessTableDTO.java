@@ -13,6 +13,7 @@ public class ProcessTableDTO {
     private String processingEndLastTask;
     private boolean hasChildren;
     private boolean hasComments;
+    private int numberOfChildren;
     private Integer correctionCommentStatus;
     private String progressCombined;
     private List<String> commentMessages; // Tooltip text
@@ -153,6 +154,14 @@ public class ProcessTableDTO {
         this.hasChildren = hasChildren;
     }
 
+    public int getNumberOfChildren(){
+        return numberOfChildren;
+    }
+
+    public void setNumberOfChildren(int numberOfChildren){
+        this.numberOfChildren = numberOfChildren;
+    }
+
     public boolean getHasComments() {
         return hasComments;
     }
@@ -209,6 +218,7 @@ public class ProcessTableDTO {
         private int id;
         private String title;
         private boolean inAssignedProject;
+        private boolean locked;
 
         public int getId() {
             return id;
@@ -232,6 +242,14 @@ public class ProcessTableDTO {
 
         public void setInAssignedProject(boolean inAssignedProject) {
             this.inAssignedProject = inAssignedProject;
+        }
+
+        public boolean getLocked() {
+            return locked;
+        }
+
+        public void setLocked(boolean locked) {
+            this.locked = locked;
         }
     }
 
