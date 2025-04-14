@@ -75,7 +75,7 @@ public class Process extends BaseTemplateBean {
     @Column(name = "ordering")
     private Integer ordering;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "docket_id", foreignKey = @ForeignKey(name = "FK_process_docket_id"))
     private Docket docket;
 
@@ -159,7 +159,7 @@ public class Process extends BaseTemplateBean {
     @Transient
     private transient ProcessKeywords processKeywords;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "import_configuration_id", foreignKey = @ForeignKey(name = "FK_process_import_configuration_id"))
     private ImportConfiguration importConfiguration;
 

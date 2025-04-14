@@ -41,6 +41,9 @@ import org.apache.logging.log4j.Logger;
 import org.kitodo.config.KitodoConfig;
 import org.kitodo.data.database.enums.TaskStatus;
 
+import javax.persistence.Persistence;
+import javax.persistence.PersistenceUtil;
+
 /**
  * Search keywords for a process.
  */
@@ -72,28 +75,49 @@ class ProcessKeywords {
     private final Set<String> taskPseudoKeywords;
 
     public ProcessKeywords(Process process) {
+        PersistenceUtil persistenceUtil = Persistence.getPersistenceUtil();
+
         // keywords for title search + default search
         this.titleKeywords = filterMinLength(initTitleKeywords(process.getTitle()));
 
         // keywords for project search + default search
-        String projectTitle = Objects.nonNull(process.getProject()) ? process.getProject().getTitle() : "";
-        this.projectKeywords = filterMinLength(initSimpleKeywords(projectTitle));
+        if (persistenceUtil.isLoaded(process, "project") && process.getProject() != null) {
+            String projectTitle = process.getProject().getTitle();
+            this.projectKeywords = filterMinLength(initSimpleKeywords(projectTitle));
+        } else {
+            this.projectKeywords = Collections.emptySet();
+        }
 
         // keywords for batch search + default search
-        this.batchKeywords = filterMinLength(initBatchKeywords(process.getBatches()));
+        if (persistenceUtil.isLoaded(process, "batches")) {
+            this.batchKeywords = filterMinLength(initBatchKeywords(process.getBatches()));
+        } else {
+            this.batchKeywords = Collections.emptySet();
+        }
 
         // keywords for task search, partly in default search
-        var taskKeywords = initTaskKeywords(process.getTasksUnmodified());
-        this.taskKeywords = filterMinLength(taskKeywords.getLeft()); // in default
-        this.taskPseudoKeywords = filterMinLength(taskKeywords.getRight());
+        if (persistenceUtil.isLoaded(process, "tasks")) {
+            var taskKeywordPair = initTaskKeywords(process.getTasksUnmodified());
+            this.taskKeywords = filterMinLength(taskKeywordPair.getLeft());
+            this.taskPseudoKeywords = filterMinLength(taskKeywordPair.getRight());
+        } else {
+            this.taskKeywords = Collections.emptySet();
+            this.taskPseudoKeywords = Collections.emptySet();
+        }
 
         // more keywords for default search only
-        this.defaultKeywords = new HashSet<String>();
-        if (Objects.nonNull(process.getId())) {
+        this.defaultKeywords = new HashSet<>();
+        if (process.getId() != null) {
             defaultKeywords.add(process.getId().toString());
         }
-        defaultKeywords.addAll(filterMinLength(initCommentKeywords(process.getComments())));
-        defaultKeywords.addAll(filterMinLength(initMetadataKeywords(process)));
+
+        if (persistenceUtil.isLoaded(process, "comments")) {
+            defaultKeywords.addAll(filterMinLength(initCommentKeywords(process.getComments())));
+        }
+
+        if (persistenceUtil.isLoaded(process, "ruleset")) {
+            defaultKeywords.addAll(filterMinLength(initMetadataKeywords(process)));
+        }
 
         if (logger.isTraceEnabled()) {
             logKeywords(process.getId());
