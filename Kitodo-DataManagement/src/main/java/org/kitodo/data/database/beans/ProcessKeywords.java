@@ -335,7 +335,7 @@ class ProcessKeywords {
      *            the comments of a process
      * @return keywords
      */
-    private static final Set<String> initCommentKeywords(List<Comment> comments) {
+    private static final Set<String> initCommentKeywords(Set<Comment> comments) {
         Set<String> tokens = new HashSet<>();
         for (Comment comment : comments) {
             String message = comment.getMessage();

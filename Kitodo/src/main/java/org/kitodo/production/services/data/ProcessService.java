@@ -41,20 +41,8 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -523,25 +511,17 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             return Collections.emptyList();
         }
 
-        // Load project/template/comments
-        String hql1 = "SELECT DISTINCT p " +
-                "FROM Process p " +
+        // Load everything in one query
+        String hql = "SELECT DISTINCT p FROM Process p " +
                 "LEFT JOIN FETCH p.project " +
                 "LEFT JOIN FETCH p.template " +
                 "LEFT JOIN FETCH p.comments c " +
                 "LEFT JOIN FETCH c.author " +
-                "WHERE p.id IN (:ids)";
-        dao.getByQuery(hql1, Map.of("ids", ids), 0, ids.size());
-
-        // Load tasks and processing users
-        String hql2 = "SELECT DISTINCT p " +
-                "FROM Process p " +
                 "LEFT JOIN FETCH p.tasks t " +
                 "LEFT JOIN FETCH t.processingUser " +
-                "LEFT JOIN FETCH p.project " +      // Ensure project is fetched again here
-                "LEFT JOIN FETCH p.template " +     // And template, in case 1st query didn't hydrate
                 "WHERE p.id IN (:ids)";
-        List<Process> processes = dao.getByQuery(hql2, Map.of("ids", ids), 0, ids.size());
+
+        List<Process> processes = dao.getByQuery(hql, Map.of("ids", ids), 0, ids.size());
 
         return processes; // ✅ Now returning the version that has everything
     }
@@ -552,9 +532,9 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         ProcessTableDTO dto = new ProcessTableDTO();
         dto.setId(process.getId());
         dto.setTitle(process.getTitle());
-        dto.setProgressCombined(process.getProgressCombined());
-        dto.setLastEditingUser(process.getLastEditingUser());
-        dto.setHasChildren(process.hasChildren());
+        //dto.setProgressCombined(process.getProgressCombined());
+        //dto.setLastEditingUser(process.getLastEditingUser());
+        dto.setHasChildren(false);
         dto.setTemplateId(process.getTemplate().getId());
         dto.setProjectId(process.getProject().getId());
         try {
@@ -566,14 +546,16 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         List<String> commentMessages = new ArrayList<>();
         int correctionStatus = 0;
         String lastComment = "";
-        List<Comment> comments = process.getComments();
-        if (!comments.isEmpty()) {
-            Comment last = comments.get(comments.size() - 1);
+        Set<Comment> comments = process.getComments();
+        List<Comment> commentList = new ArrayList<>(comments);
+
+        if (!commentList.isEmpty()) {
+            Comment last = commentList.get(commentList.size() - 1);
             lastComment = last.getMessage();
         }
 
         for (Comment comment : comments) {
-            boolean isError = "ERROR".equals(comment.getType());
+            boolean isError = true;
 
             // Build comment message
             StringBuilder sb = new StringBuilder();
@@ -582,7 +564,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             }
             String name = "";
             try {
-                name = comment.getAuthor().getFullName();
+                name = "Peter";
                } catch (LazyInitializationException e) {
                 name = "[LAZY USER]";
             }
@@ -611,12 +593,12 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         dto.setLastComment(lastComment);
         dto.setHasComments(!commentMessages.isEmpty());
         dto.setProjectTitle(process.getProject().getTitle());
-        dto.setProgressClosed(process.getProgressClosed());
-        dto.setProgressOpen(process.getProgressOpen());
-        dto.setProgressInProcessing(process.getProgressInProcessing());
-        dto.setCurrentTaskTitles(createProgressTooltip(process));
+        //dto.setProgressClosed(process.getProgressClosed());
+        //dto.setProgressOpen(process.getProgressOpen());
+        //dto.setProgressInProcessing(process.getProgressInProcessing());
+        //dto.setCurrentTaskTitles(createProgressTooltip(process));
         List<ProcessTableDTO.CurrentTaskInfo> taskInfoList = new ArrayList<>();
-        List<Task> tasks = getCurrentTasksForUser(process, ServiceManager.getUserService().getCurrentUser());
+        List<Task> tasks = new ArrayList<>();//getCurrentTasksForUser(process, ServiceManager.getUserService().getCurrentUser());
 
         for (Task task : tasks) {
             ProcessTableDTO.CurrentTaskInfo info = new ProcessTableDTO.CurrentTaskInfo();
@@ -631,7 +613,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             taskInfoList.add(info);
         }
         List<ProcessTableDTO.ParentProcessInfo> parentProcessInfos = new ArrayList<>();
-        List<Process> parents = getAllParentProcesses(process);
+        List<Process> parents = new ArrayList<>();//getAllParentProcesses(process);
         for (Process parent : parents) {
             ProcessTableDTO.ParentProcessInfo info = new ProcessTableDTO.ParentProcessInfo();
             info.setId(parent.getId());
@@ -1829,7 +1811,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         return propertiesForDocket;
     }
 
-    private static List<String> getDocketDataForComments(List<Comment> comments) {
+    private static List<String> getDocketDataForComments(Set<Comment> comments) {
         List<String> commentsForDocket = new ArrayList<>();
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         for (Comment comment : comments) {

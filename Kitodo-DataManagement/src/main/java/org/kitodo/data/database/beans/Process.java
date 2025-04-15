@@ -12,12 +12,7 @@
 package org.kitodo.data.database.beans;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -34,6 +29,7 @@ import javax.persistence.PostLoad;
 import javax.persistence.PostUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import javax.persistence.OrderColumn;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.hibernate.LazyInitializationException;
@@ -106,7 +102,7 @@ public class Process extends BaseTemplateBean {
     private List<Task> tasks;
 
     @OneToMany(mappedBy = "process", cascade = CascadeType.PERSIST, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<Comment> comments;
+    private Set<Comment> comments;
 
     @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinTable(name = "process_x_property",
@@ -590,10 +586,10 @@ public class Process extends BaseTemplateBean {
      *
      * @return value of comments
      */
-    public List<Comment> getComments() {
-        initialize(new ProcessDAO(), this.comments);
+    public Set<Comment> getComments() {
+        //initialize(new ProcessDAO(), this.comments);
         if (Objects.isNull(this.comments)) {
-            this.comments = new ArrayList<>();
+            this.comments = new LinkedHashSet<>();
         }
         return this.comments;
     }
@@ -603,7 +599,7 @@ public class Process extends BaseTemplateBean {
      *
      * @param comments as List of Comment objects
      */
-    public void setComments(List<Comment> comments) {
+    public void setComments(Set<Comment> comments) {
         this.comments = comments;
     }
 
