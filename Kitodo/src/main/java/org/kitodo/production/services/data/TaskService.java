@@ -934,4 +934,40 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
 
         return progressMap;
     }
+
+    public Map<Integer, String> getLastEditingUserNamesByProcessIds(List<Integer> processIds) {
+        if (processIds == null || processIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql = "SELECT t.process.id, CONCAT(t.processingUser.name, ' ', t.processingUser.surname), MAX(t.processingBegin) " +
+                "FROM Task t " +
+                "WHERE t.processingStatus IN (:statuses) " +
+                "AND t.processingUser IS NOT NULL " +
+                "AND t.processingBegin IS NOT NULL " +
+                "AND t.process.id IN (:processIds) " +
+                "GROUP BY t.process.id, t.processingUser.name, t.processingUser.surname";
+
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("processIds", processIds);
+        parameters.put("statuses", List.of(TaskStatus.DONE, TaskStatus.INWORK));
+
+        List<Object[]> result = dao.getProjectionByQuery(hql, parameters);
+
+        Map<Integer, String> userMap = new HashMap<>();
+        Map<Integer, String> maxTimestamps = new HashMap<>();
+
+        for (Object[] row : result) {
+            Integer processId = (Integer) row[0];
+            String fullName = (String) row[1];
+            String timestamp = row[2].toString(); // keep as String
+
+            String currentMax = maxTimestamps.get(processId);
+            if (currentMax == null || timestamp.compareTo(currentMax) > 0) {
+                maxTimestamps.put(processId, timestamp);
+                userMap.put(processId, fullName);
+            }
+        }
+        return userMap;
+    }
 }

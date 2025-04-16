@@ -205,4 +205,7 @@ public class TaskDAO extends BaseDAO<Task> {
 
         return getProjectionByQuery(hql, parameters);
     }
+
+
+
 }

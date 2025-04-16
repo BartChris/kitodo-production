@@ -505,9 +505,23 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
 
         Map<Integer, Map<TaskStatus, Double>> progressMap =
                 ServiceManager.getTaskService().getProgressPercentagesForProcesses(actualProcessIds);
+        Map<Integer, String> lastEditingUserMap = ServiceManager.getTaskService().getLastEditingUserNamesByProcessIds(actualProcessIds);
+        Map<Integer, Boolean> exportableStatus = getExportableStatus(actualProcessIds);
+        Set<Integer> toCheckWithImages = exportableStatus.entrySet().stream()
+                .filter(e -> Boolean.FALSE.equals(e.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+        // Now check those few for images
+        for (Process process : processdata) {
+            if (toCheckWithImages.contains(process.getId())) {
+                Folder generatorSource = process.getProject().getGeneratorSource();
+                boolean hasImages = FileService.hasImages(process, generatorSource);
+                exportableStatus.put(process.getId(), hasImages);
+            }
+        }
         List<ProcessTableDTO> dtoList = new ArrayList<>();
         for (Process process : processdata) {
-            ProcessTableDTO dto = mapToProcessDto(process, progressMap);
+            ProcessTableDTO dto = mapToProcessDto(process, progressMap, lastEditingUserMap, exportableStatus);
             dtoList.add(dto);
         }
         return dtoList;
@@ -520,8 +534,10 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
 
         // Load everything in one query
         String hql = "SELECT DISTINCT p FROM Process p " +
-                "LEFT JOIN FETCH p.project " +
+                "LEFT JOIN FETCH p.project proj " +
+                "LEFT JOIN FETCH proj.generatorSource " +
                 "LEFT JOIN FETCH p.template " +
+                "LEFT JOIN FETCH p.ruleset " +
                 "LEFT JOIN FETCH p.comments c " +
                 "LEFT JOIN FETCH c.author " +
                 "LEFT JOIN FETCH p.tasks t " +
@@ -536,19 +552,22 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
 
 
 
-    private ProcessTableDTO mapToProcessDto(Process process, Map<Integer, Map<TaskStatus, Double>> progressMap) {
+    private ProcessTableDTO mapToProcessDto(Process process, Map<Integer, Map<TaskStatus, Double>> progressMap,
+                                            Map<Integer,String> lastEditingUserMap, Map<Integer, Boolean> exportableStatus) {
         ProcessTableDTO dto = new ProcessTableDTO();
         dto.setId(process.getId());
         dto.setTitle(process.getTitle());
-        //dto.setLastEditingUser(process.getLastEditingUser());
+        dto.setLastEditingUser(
+                lastEditingUserMap.getOrDefault(process.getId(), null)
+        );
         dto.setHasChildren(false);
         dto.setTemplateId(process.getTemplate().getId());
         dto.setProjectId(process.getProject().getId());
+        dto.setCanBeExported(exportableStatus.getOrDefault(process.getId(), false));
         try {
-            //dto.setCanBeExported(canBeExported(process));
             dto.setCanCreateChildProcess(canCreateChildProcess(process));
         } catch (DAOException | IOException e) {
-            throw new RuntimeException(e);
+            Helper.setErrorMessage(e.getMessage());
         }
         List<String> commentMessages = new ArrayList<>();
         int correctionStatus = 0;
@@ -569,12 +588,11 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             if (isError) {
                 sb.append("[!]");
             }
-            String name = "";
-            try {
-                name = "Peter";
-               } catch (LazyInitializationException e) {
-                name = "[LAZY USER]";
+            String name = "-";
+            if (comment.getAuthor() != null) {
+                name = comment.getAuthor().getFullName();
             }
+
 
             sb.append(" ")
                     .append(comment.getCreationDate())
@@ -610,7 +628,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                 ProcessConverter.getCombinedProgressFromTaskPercentages(progress)
         );
 
-        //dto.setCurrentTaskTitles(createProgressTooltip(process));
+        dto.setCurrentTaskTitles(createProgressTooltip(process));
         List<ProcessTableDTO.CurrentTaskInfo> taskInfoList = new ArrayList<>();
         List<Task> tasks = getCurrentTasksForUser(process, ServiceManager.getUserService().getCurrentUser());
 
@@ -627,7 +645,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             taskInfoList.add(info);
         }
         List<ProcessTableDTO.ParentProcessInfo> parentProcessInfos = new ArrayList<>();
-        List<Process> parents = new ArrayList<>();//getAllParentProcesses(process);
+        List<Process> parents = getAllParentProcesses(process);
         for (Process parent : parents) {
             ProcessTableDTO.ParentProcessInfo info = new ProcessTableDTO.ParentProcessInfo();
             info.setId(parent.getId());
@@ -2557,6 +2575,36 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                         .collect(Collectors.toSet()).isEmpty())
                 .collect(Collectors.toList());
     }
+
+    public Map<Integer, Boolean> getExportableStatus(List<Integer> processIds) {
+        // HQL using EXISTS to avoid joins/grouping
+        String hql = "SELECT p.id, " +
+                "EXISTS (" +
+                "   SELECT 1 FROM Process c " +
+                "   WHERE c.parent.id = p.id" +
+                ") AS hasChildren, " +
+                "p.project.generatorSource IS NULL AS hasNoGeneratorSource " +
+                "FROM Process p " +
+                "WHERE p.id IN (:ids)";
+
+        List<Object[]> rows = dao.getProjectionByQuery(hql, Map.of("ids", processIds));
+
+        Map<Integer, Boolean> exportableMap = new HashMap<>();
+
+        for (Object[] row : rows) {
+            Integer processId = (Integer) row[0];
+            Boolean hasChildren = (Boolean) row[1];
+            Boolean noGeneratorSource = (Boolean) row[2];
+
+            if (Boolean.TRUE.equals(hasChildren) || Boolean.TRUE.equals(noGeneratorSource)) {
+                exportableMap.put(processId, true);
+            } else {
+                exportableMap.put(processId, false);
+            }
+        }
+        return exportableMap;
+    }
+
 
     /**
      * Checks and returns whether the process with the given ID 'processId' can be exported or not.
