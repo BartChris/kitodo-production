@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -881,5 +882,56 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
             return templateTasks.get(0).getId();
         }
         return -1;
+    }
+
+    public Map<Integer, Map<TaskStatus, Double>> getProgressPercentagesForProcesses(List<Integer> processIds) {
+        List<Object[]> results = dao.getTaskStatusCountsByProcessIds(processIds);
+
+        Map<Integer, Map<TaskStatus, Integer>> rawCounts = new HashMap<>();
+
+        for (Object[] row : results) {
+            Integer processId = (Integer) row[0];
+            TaskStatus status = (TaskStatus) row[1];
+            Long count = (Long) row[2];
+
+            rawCounts
+                    .computeIfAbsent(processId, k -> new EnumMap<>(TaskStatus.class))
+                    .merge(status, count.intValue(), Integer::sum);
+        }
+
+        Map<Integer, Map<TaskStatus, Double>> progressMap = new HashMap<>();
+        for (Map.Entry<Integer, Map<TaskStatus, Integer>> entry : rawCounts.entrySet()) {
+            Integer processId = entry.getKey();
+            Map<TaskStatus, Integer> counts = entry.getValue();
+            int total = counts.values().stream().mapToInt(Integer::intValue).sum();
+
+            if (total == 0) {
+                counts.put(TaskStatus.LOCKED, 1);
+                total = 1;
+            }
+
+            Map<TaskStatus, Double> percentages = new EnumMap<>(TaskStatus.class);
+            for (TaskStatus status : TaskStatus.values()) {
+                int count = counts.getOrDefault(status, 0);
+                double percent = 100.0 * count / total;
+                percentages.put(status, percent);
+            }
+
+            progressMap.put(processId, percentages);
+        }
+
+        // 🧩 Fill in missing process IDs with default progress
+        for (Integer processId : processIds) {
+            if (!progressMap.containsKey(processId)) {
+                Map<TaskStatus, Double> emptyProgress = new EnumMap<>(TaskStatus.class);
+                emptyProgress.put(TaskStatus.DONE, 0.0);
+                emptyProgress.put(TaskStatus.INWORK, 0.0);
+                emptyProgress.put(TaskStatus.OPEN, 0.0);
+                emptyProgress.put(TaskStatus.LOCKED, 100.0); // Treat no tasks as fully blocked
+                progressMap.put(processId, emptyProgress);
+            }
+        }
+
+        return progressMap;
     }
 }

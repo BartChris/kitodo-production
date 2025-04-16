@@ -277,11 +277,11 @@ public class ProcessConverter {
      * @return string the string representing the combined progress of the process
      */
     public static String getCombinedProgressFromTaskPercentages(Map<TaskStatus, Double> percentages) {
-        DecimalFormat decimalFormat = new DecimalFormat("#000");
-        return decimalFormat.format(percentages.get(TaskStatus.DONE)) 
-            + decimalFormat.format(percentages.get(TaskStatus.INWORK)) 
-            + decimalFormat.format(percentages.get(TaskStatus.OPEN))
-            + decimalFormat.format(percentages.get(TaskStatus.LOCKED));
+        DecimalFormat decimalFormat = new DecimalFormat("000");
+        return decimalFormat.format(percentages.getOrDefault(TaskStatus.DONE, 0.0))
+                + decimalFormat.format(percentages.getOrDefault(TaskStatus.INWORK, 0.0))
+                + decimalFormat.format(percentages.getOrDefault(TaskStatus.OPEN, 0.0))
+                + decimalFormat.format(percentages.getOrDefault(TaskStatus.LOCKED, 0.0));
     }
 
     /**

@@ -99,6 +99,7 @@ import org.kitodo.data.database.beans.Ruleset;
 import org.kitodo.data.database.beans.Task;
 import org.kitodo.data.database.beans.Template;
 import org.kitodo.data.database.beans.User;
+import org.kitodo.data.database.converter.ProcessConverter;
 import org.kitodo.data.database.enums.CommentType;
 import org.kitodo.data.database.enums.CorrectionComments;
 import org.kitodo.data.database.enums.TaskStatus;
@@ -498,9 +499,15 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                                                boolean showClosedProcesses, boolean showInactiveProjects) throws DAOException {
         List<Integer> results = loadDataInt(offset, limit, sortField, sortOrder, filters, showClosedProcesses, showInactiveProjects);
         List<Process> processdata = fetchFullProcesses(results);
+        List<Integer> actualProcessIds = processdata.stream()
+                .map(Process::getId)
+                .collect(Collectors.toList());
+
+        Map<Integer, Map<TaskStatus, Double>> progressMap =
+                ServiceManager.getTaskService().getProgressPercentagesForProcesses(actualProcessIds);
         List<ProcessTableDTO> dtoList = new ArrayList<>();
         for (Process process : processdata) {
-            ProcessTableDTO dto = mapToProcessDto(process);
+            ProcessTableDTO dto = mapToProcessDto(process, progressMap);
             dtoList.add(dto);
         }
         return dtoList;
@@ -518,6 +525,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                 "LEFT JOIN FETCH p.comments c " +
                 "LEFT JOIN FETCH c.author " +
                 "LEFT JOIN FETCH p.tasks t " +
+                "LEFT JOIN FETCH t.roles " +
                 "LEFT JOIN FETCH t.processingUser " +
                 "WHERE p.id IN (:ids)";
 
@@ -528,11 +536,10 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
 
 
 
-    private ProcessTableDTO mapToProcessDto(Process process) {
+    private ProcessTableDTO mapToProcessDto(Process process, Map<Integer, Map<TaskStatus, Double>> progressMap) {
         ProcessTableDTO dto = new ProcessTableDTO();
         dto.setId(process.getId());
         dto.setTitle(process.getTitle());
-        //dto.setProgressCombined(process.getProgressCombined());
         //dto.setLastEditingUser(process.getLastEditingUser());
         dto.setHasChildren(false);
         dto.setTemplateId(process.getTemplate().getId());
@@ -593,12 +600,19 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         dto.setLastComment(lastComment);
         dto.setHasComments(!commentMessages.isEmpty());
         dto.setProjectTitle(process.getProject().getTitle());
-        //dto.setProgressClosed(process.getProgressClosed());
-        //dto.setProgressOpen(process.getProgressOpen());
-        //dto.setProgressInProcessing(process.getProgressInProcessing());
+
+
+        Map<TaskStatus, Double> progress = progressMap.getOrDefault(process.getId(), Collections.emptyMap());
+        dto.setProgressClosed(progress.getOrDefault(TaskStatus.DONE, 0.0));
+        dto.setProgressOpen(progress.getOrDefault(TaskStatus.OPEN, 0.0));
+        dto.setProgressInProcessing(progress.getOrDefault(TaskStatus.INWORK, 0.0));
+        dto.setProgressCombined(
+                ProcessConverter.getCombinedProgressFromTaskPercentages(progress)
+        );
+
         //dto.setCurrentTaskTitles(createProgressTooltip(process));
         List<ProcessTableDTO.CurrentTaskInfo> taskInfoList = new ArrayList<>();
-        List<Task> tasks = new ArrayList<>();//getCurrentTasksForUser(process, ServiceManager.getUserService().getCurrentUser());
+        List<Task> tasks = getCurrentTasksForUser(process, ServiceManager.getUserService().getCurrentUser());
 
         for (Task task : tasks) {
             ProcessTableDTO.CurrentTaskInfo info = new ProcessTableDTO.CurrentTaskInfo();

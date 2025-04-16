@@ -11,11 +11,7 @@
 
 package org.kitodo.data.database.beans;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.persistence.CascadeType;
@@ -144,7 +140,7 @@ public class Task extends BaseBean {
     @JoinTable(name = "task_x_role", joinColumns = {
             @JoinColumn(name = "task_id", foreignKey = @ForeignKey(name = "FK_task_x_role_task_id")) }, inverseJoinColumns = {
             @JoinColumn(name = "role_id", foreignKey = @ForeignKey(name = "FK_task_x_user_role_id")) })
-    private List<Role> roles = new ArrayList<>();
+    private Set<Role> roles = new LinkedHashSet<>();
 
     @Transient
     private String localizedTitle;
@@ -161,7 +157,7 @@ public class Task extends BaseBean {
      */
     public Task() {
         this.title = "";
-        this.roles = new ArrayList<>();
+        this.roles = new LinkedHashSet<>();
         this.ordering = 0;
     }
 
@@ -195,7 +191,7 @@ public class Task extends BaseBean {
         this.workflowCondition = templateTask.getWorkflowCondition();
 
         // necessary to create new ArrayList in other case session problem!
-        this.roles = new ArrayList<>(templateTask.getRoles());
+        this.roles = new LinkedHashSet<>(templateTask.getRoles());
     }
 
     /**
@@ -499,10 +495,10 @@ public class Task extends BaseBean {
      *
      * @return list of Role objects or empty list
      */
-    public List<Role> getRoles() {
-        initialize(new TaskDAO(), this.roles);
+    public Set<Role> getRoles() {
+        //initialize(new TaskDAO(), this.roles);
         if (Objects.isNull(this.roles)) {
-            this.roles = new ArrayList<>();
+            this.roles = new LinkedHashSet<>();
         }
         return this.roles;
     }
@@ -523,7 +519,7 @@ public class Task extends BaseBean {
      * @param roles
      *            as list of Role objects
      */
-    public void setRoles(List<Role> roles) {
+    public void setRoles(Set<Role> roles) {
         this.roles = roles;
     }
 

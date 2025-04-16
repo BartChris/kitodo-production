@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.text.StrTokenizer;
@@ -717,7 +718,7 @@ public class KitodoScriptService {
         for (Process process : processes) {
             for (Task task : process.getTasks()) {
                 if (task.getTitle().equals(this.parameters.get(TASK_TITLE))) {
-                    List<Role> roles = task.getRoles();
+                    Set<Role> roles = task.getRoles();
                     if (!roles.contains(role)) {
                         roles.add(role);
                         saveTask(process.getTitle(), task);

@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.SessionScoped;
@@ -381,7 +382,7 @@ public class ProcessForm extends TemplateBaseForm {
         final Stopwatch stopwatch = new Stopwatch(this, "removeTask");
         this.process.getTasks().remove(this.task);
 
-        List<Role> roles = this.task.getRoles();
+        Set<Role> roles = this.task.getRoles();
         for (Role role : roles) {
             role.getTasks().remove(this.task);
         }
