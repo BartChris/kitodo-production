@@ -629,6 +629,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                 ProcessConverter.getCombinedProgressFromTaskPercentages(progress)
         );
 
+
         dto.setCurrentTaskTitles(createProgressTooltip(process));
         List<ProcessTableDTO.CurrentTaskInfo> taskInfoList = new ArrayList<>();
         List<Task> tasks = processTasksMap.getOrDefault(process.getId(), Collections.emptyList());
