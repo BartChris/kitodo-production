@@ -51,6 +51,7 @@ import java.util.stream.Collectors;
 
 import javax.faces.context.ExternalContext;
 import javax.faces.context.FacesContext;
+import javax.persistence.criteria.CriteriaBuilder;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -506,6 +507,11 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         Map<Integer, Map<TaskStatus, Double>> progressMap =
                 ServiceManager.getTaskService().getProgressPercentagesForProcesses(actualProcessIds);
         Map<Integer, String> lastEditingUserMap = ServiceManager.getTaskService().getLastEditingUserNamesByProcessIds(actualProcessIds);
+        Map<Integer, List<Comment>> commentsMap = ServiceManager.getCommentService().getCommentsByProcessIds(actualProcessIds);
+        Set<Integer> userRoles = ServiceManager.getUserService().getCurrentUser().getRoles().stream()
+                .map(Role::getId)
+                .collect(Collectors.toSet());
+        Map<Integer, List<Task>> processTasksMap = ServiceManager.getTaskService().getVisibleTasksGroupedByProcess(actualProcessIds, userRoles);
         Map<Integer, Boolean> exportableStatus = getExportableStatus(actualProcessIds);
         Set<Integer> toCheckWithImages = exportableStatus.entrySet().stream()
                 .filter(e -> Boolean.FALSE.equals(e.getValue()))
@@ -521,7 +527,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         }
         List<ProcessTableDTO> dtoList = new ArrayList<>();
         for (Process process : processdata) {
-            ProcessTableDTO dto = mapToProcessDto(process, progressMap, lastEditingUserMap, exportableStatus);
+            ProcessTableDTO dto = mapToProcessDto(process, progressMap, lastEditingUserMap, exportableStatus, commentsMap, processTasksMap);
             dtoList.add(dto);
         }
         return dtoList;
@@ -538,12 +544,10 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                 "LEFT JOIN FETCH proj.generatorSource " +
                 "LEFT JOIN FETCH p.template " +
                 "LEFT JOIN FETCH p.ruleset " +
-                "LEFT JOIN FETCH p.comments c " +
-                "LEFT JOIN FETCH c.author " +
                 "LEFT JOIN FETCH p.tasks t " +
-                "LEFT JOIN FETCH t.roles " +
-                "LEFT JOIN FETCH t.processingUser " +
+                "LEFT JOIN FETCH t.processingUser " +  // this one is used
                 "WHERE p.id IN (:ids)";
+
 
         List<Process> processes = dao.getByQuery(hql, Map.of("ids", ids), 0, ids.size());
 
@@ -553,7 +557,8 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
 
 
     private ProcessTableDTO mapToProcessDto(Process process, Map<Integer, Map<TaskStatus, Double>> progressMap,
-                                            Map<Integer,String> lastEditingUserMap, Map<Integer, Boolean> exportableStatus) {
+                                            Map<Integer,String> lastEditingUserMap, Map<Integer, Boolean> exportableStatus,
+                                            Map<Integer, List<Comment>> commentsMap, Map<Integer, List<Task>> processTasksMap) {
         ProcessTableDTO dto = new ProcessTableDTO();
         dto.setId(process.getId());
         dto.setTitle(process.getTitle());
@@ -572,27 +577,24 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         List<String> commentMessages = new ArrayList<>();
         int correctionStatus = 0;
         String lastComment = "";
-        Set<Comment> comments = process.getComments();
-        List<Comment> commentList = new ArrayList<>(comments);
-
+        List<Comment> commentList = commentsMap.getOrDefault(process.getId(), Collections.emptyList());
         if (!commentList.isEmpty()) {
             Comment last = commentList.get(commentList.size() - 1);
             lastComment = last.getMessage();
         }
 
-        for (Comment comment : comments) {
-            boolean isError = true;
+        for (Comment comment : commentList) {
+            boolean isError = true; // If this is ever dynamic, update accordingly
 
-            // Build comment message
             StringBuilder sb = new StringBuilder();
             if (isError) {
                 sb.append("[!]");
             }
+
             String name = "-";
             if (comment.getAuthor() != null) {
                 name = comment.getAuthor().getFullName();
             }
-
 
             sb.append(" ")
                     .append(comment.getCreationDate())
@@ -600,6 +602,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                     .append(name)
                     .append(": ")
                     .append(comment.getMessage());
+
             commentMessages.add(sb.toString());
 
             // Determine correction status
@@ -612,8 +615,6 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                 }
             }
         }
-
-        dto.setCorrectionCommentStatus(correctionStatus);
         dto.setCommentMessages(commentMessages);
         dto.setLastComment(lastComment);
         dto.setHasComments(!commentMessages.isEmpty());
@@ -630,7 +631,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
 
         dto.setCurrentTaskTitles(createProgressTooltip(process));
         List<ProcessTableDTO.CurrentTaskInfo> taskInfoList = new ArrayList<>();
-        List<Task> tasks = getCurrentTasksForUser(process, ServiceManager.getUserService().getCurrentUser());
+        List<Task> tasks = processTasksMap.getOrDefault(process.getId(), Collections.emptyList());
 
         for (Task task : tasks) {
             ProcessTableDTO.CurrentTaskInfo info = new ProcessTableDTO.CurrentTaskInfo();

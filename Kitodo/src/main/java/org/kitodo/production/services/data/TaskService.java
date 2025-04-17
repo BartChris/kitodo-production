@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -970,4 +971,30 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
         }
         return userMap;
     }
+
+    public Map<Integer, List<Task>> getVisibleTasksGroupedByProcess(List<Integer> processIds, Set<Integer> userRoleIds) {
+        if (processIds == null || processIds.isEmpty() || userRoleIds == null || userRoleIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql = "SELECT DISTINCT t FROM Task t " +
+                "JOIN t.roles r " +
+                "JOIN FETCH t.processingUser " +
+                "WHERE t.process.id IN :processIds " +
+                "AND t.processingStatus IN :statuses " +
+                "AND r.id IN :userRoleIds";
+
+        Map<String, Object> params = Map.of(
+                "processIds", processIds,
+                "statuses", List.of(TaskStatus.OPEN, TaskStatus.INWORK),
+                "userRoleIds", userRoleIds
+        );
+
+        List<Task> tasks = dao.getByQuery(hql, params);
+
+        return tasks.stream()
+                .collect(Collectors.groupingBy(task -> task.getProcess().getId()));
+    }
+
+
 }
