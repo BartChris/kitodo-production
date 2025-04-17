@@ -19,6 +19,7 @@ public class ProcessTableDTO {
     private List<String> commentMessages; // Tooltip text
     private String lastComment;
     private String currentTaskTitles;
+    private boolean hasTasks;
     private List<CurrentTaskInfo> tasks;
     private List<ParentProcessInfo> parentProcesses;
     private boolean canCreateChildProcess;
@@ -50,6 +51,14 @@ public class ProcessTableDTO {
 
     public int getProjectId() {
         return projectId;
+    }
+
+    public boolean getHasTasks() {
+        return hasTasks;
+    }
+
+    public void setHasTasks(boolean hasTasks) {
+        this.hasTasks = hasTasks;
     }
 
     public String getLastComment() {

@@ -566,6 +566,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                 lastEditingUserMap.getOrDefault(process.getId(), null)
         );
         dto.setHasChildren(false);
+        dto.setHasTasks(!process.getTasks().isEmpty());
         dto.setTemplateId(process.getTemplate().getId());
         dto.setProjectId(process.getProject().getId());
         dto.setCanBeExported(exportableStatus.getOrDefault(process.getId(), false));
