@@ -512,7 +512,8 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                 .map(Role::getId)
                 .collect(Collectors.toSet());
         Map<Integer, List<Task>> processTasksMap = ServiceManager.getTaskService().getVisibleTasksGroupedByProcess(actualProcessIds, userRoles);
-        Map<Integer, Boolean> exportableStatus = getExportableStatus(actualProcessIds);
+        Map<Integer, Integer> childrenNumberMap = getNumberOfChildrenMap(actualProcessIds);
+        Map<Integer, Boolean> exportableStatus = getExportableStatus(actualProcessIds, childrenNumberMap);
         Set<Integer> toCheckWithImages = exportableStatus.entrySet().stream()
                 .filter(e -> Boolean.FALSE.equals(e.getValue()))
                 .map(Map.Entry::getKey)
@@ -527,7 +528,8 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         }
         List<ProcessTableDTO> dtoList = new ArrayList<>();
         for (Process process : processdata) {
-            ProcessTableDTO dto = mapToProcessDto(process, progressMap, lastEditingUserMap, exportableStatus, commentsMap, processTasksMap);
+            ProcessTableDTO dto = mapToProcessDto(process, progressMap, lastEditingUserMap, exportableStatus,
+                    commentsMap, processTasksMap, childrenNumberMap);
             dtoList.add(dto);
         }
         return dtoList;
@@ -558,14 +560,16 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
 
     private ProcessTableDTO mapToProcessDto(Process process, Map<Integer, Map<TaskStatus, Double>> progressMap,
                                             Map<Integer,String> lastEditingUserMap, Map<Integer, Boolean> exportableStatus,
-                                            Map<Integer, List<Comment>> commentsMap, Map<Integer, List<Task>> processTasksMap) {
+                                            Map<Integer, List<Comment>> commentsMap, Map<Integer, List<Task>> processTasksMap,
+                                            Map<Integer, Integer> childrenNumberMap) {
         ProcessTableDTO dto = new ProcessTableDTO();
         dto.setId(process.getId());
         dto.setTitle(process.getTitle());
         dto.setLastEditingUser(
                 lastEditingUserMap.getOrDefault(process.getId(), null)
         );
-        dto.setHasChildren(false);
+        dto.setHasChildren(childrenNumberMap.getOrDefault(process.getId(), 0) > 0);
+        dto.setNumberOfChildren(childrenNumberMap.getOrDefault(process.getId(), 0));
         dto.setHasTasks(!process.getTasks().isEmpty());
         dto.setTemplateId(process.getTemplate().getId());
         dto.setProjectId(process.getProject().getId());
@@ -2579,32 +2583,53 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                 .collect(Collectors.toList());
     }
 
-    public Map<Integer, Boolean> getExportableStatus(List<Integer> processIds) {
-        // HQL using EXISTS to avoid joins/grouping
-        String hql = "SELECT p.id, " +
-                "EXISTS (" +
-                "   SELECT 1 FROM Process c " +
-                "   WHERE c.parent.id = p.id" +
-                ") AS hasChildren, " +
-                "p.project.generatorSource IS NULL AS hasNoGeneratorSource " +
-                "FROM Process p " +
-                "WHERE p.id IN (:ids)";
+    public Map<Integer, Integer> getNumberOfChildrenMap(List<Integer> processIds) {
+        if (processIds == null || processIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql = "SELECT p.id, COUNT(c.id) " +
+                "FROM Process p LEFT JOIN Process c ON c.parent.id = p.id " +
+                "WHERE p.id IN (:ids) " +
+                "GROUP BY p.id";
 
         List<Object[]> rows = dao.getProjectionByQuery(hql, Map.of("ids", processIds));
+        Map<Integer, Integer> result = new HashMap<>();
 
+        for (Object[] row : rows) {
+            Integer processId = (Integer) row[0];
+            Long count = (Long) row[1];
+            result.put(processId, count.intValue());
+        }
+
+        // Fill in zeros for processes without children
+        for (Integer id : processIds) {
+            result.putIfAbsent(id, 0);
+        }
+
+        return result;
+    }
+
+
+    public Map<Integer, Boolean> getExportableStatus(List<Integer> processIds, Map<Integer, Integer> numberOfChildrenMap) {
+        if (processIds == null || processIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql = "SELECT p.id, p.project.generatorSource IS NULL " +
+                "FROM Process p WHERE p.id IN (:ids)";
+
+        List<Object[]> rows = dao.getProjectionByQuery(hql, Map.of("ids", processIds));
         Map<Integer, Boolean> exportableMap = new HashMap<>();
 
         for (Object[] row : rows) {
             Integer processId = (Integer) row[0];
-            Boolean hasChildren = (Boolean) row[1];
-            Boolean noGeneratorSource = (Boolean) row[2];
-
-            if (Boolean.TRUE.equals(hasChildren) || Boolean.TRUE.equals(noGeneratorSource)) {
-                exportableMap.put(processId, true);
-            } else {
-                exportableMap.put(processId, false);
-            }
+            Boolean noGeneratorSource = (Boolean) row[1];
+            Integer numberOfChildren = numberOfChildrenMap.getOrDefault(processId, 0);
+            // ✅ logic: process is exportable if it has children OR no generator source
+            exportableMap.put(processId, numberOfChildren > 0 || Boolean.TRUE.equals(noGeneratorSource));
         }
+
         return exportableMap;
     }
 
