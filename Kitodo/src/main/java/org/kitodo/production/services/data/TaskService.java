@@ -979,7 +979,7 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
 
         String hql = "SELECT DISTINCT t FROM Task t " +
                 "JOIN t.roles r " +
-                "JOIN FETCH t.processingUser " +
+                "LEFT JOIN FETCH t.processingUser " +
                 "WHERE t.process.id IN :processIds " +
                 "AND t.processingStatus IN :statuses " +
                 "AND r.id IN :userRoleIds";
