@@ -256,11 +256,19 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
     }
 
 
+    public List<TaskTableDTO> loadDataAsDTO(int first, int pageSize, String sortField, SortOrder sortOrder, Map filters)
+            throws DAOException {
+        return loadDataAsDTO(first, pageSize, sortField, sortOrder, filters, false, false, false,
+                Arrays.asList(TaskStatus.OPEN, TaskStatus.INWORK));
+    }
+
+
+
 
     public List<TaskTableDTO> loadDataAsDTO(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
                                boolean onlyOwnTasks, boolean hideCorrectionTasks, boolean showAutomaticTasks,
                                List<TaskStatus> taskStatus)
-            throws DAOException, InterruptedException {
+            throws DAOException {
         List<Integer> results = loadDataInt(offset, limit, sortField, sortOrder, filters, onlyOwnTasks, hideCorrectionTasks,showAutomaticTasks, taskStatus);
         List<Task> tasks = fetchFullTasks(results);
         return new TaskTableDTOMapper().mapFromEntities(tasks);

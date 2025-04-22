@@ -89,13 +89,9 @@ public class LazyTaskModel extends LazyBeanModel {
                 }
                 setRowCount(toIntExact(((TaskService)searchService).countResults(filterMap, this.onlyOwnTasks,
                         this.hideCorrectionTasks, this.showAutomaticTasks, this.taskStatusRestriction)));
-                try {
-                    entities = ((TaskService)searchService).loadDataAsDTO(first, pageSize, sortField, sortOrder, filterMap,
-                            this.onlyOwnTasks, this.hideCorrectionTasks, this.showAutomaticTasks,
-                            this.taskStatusRestriction);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+                entities = ((TaskService)searchService).loadDataAsDTO(first, pageSize, sortField, sortOrder, filterMap,
+                        this.onlyOwnTasks, this.hideCorrectionTasks, this.showAutomaticTasks,
+                        this.taskStatusRestriction);
                 logger.trace("{} entities loaded!", entities.size());
                 return stopwatch.stop(entities);
             } catch (DAOException e) {
