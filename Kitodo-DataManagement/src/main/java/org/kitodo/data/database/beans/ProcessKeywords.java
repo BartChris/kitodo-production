@@ -41,9 +41,6 @@ import org.apache.logging.log4j.Logger;
 import org.kitodo.config.KitodoConfig;
 import org.kitodo.data.database.enums.TaskStatus;
 
-import javax.persistence.Persistence;
-import javax.persistence.PersistenceUtil;
-
 /**
  * Search keywords for a process.
  */
@@ -60,9 +57,9 @@ class ProcessKeywords {
     private static final Pattern METADATA_PATTERN = Pattern.compile("name=\"([^\"]+)\">([^<]*)<", Pattern.DOTALL);
     private static final Pattern METADATA_SECTIONS_PATTERN
             = Pattern.compile("<mets:dmdSec.*?o(?: (?:xmlns|version)\\S+)*?>(.*?)</kitodo:k",
-        Pattern.DOTALL);
+            Pattern.DOTALL);
     private static final Pattern RULESET_KEY_PATTERN = Pattern.compile("key id=\"([^\"]+)\">(.*?)</key>",
-        Pattern.DOTALL);
+            Pattern.DOTALL);
     private static final Pattern RULESET_LABEL_PATTERN = Pattern.compile("<label[^>]*>([^<]+)", Pattern.DOTALL);
 
     private static final Map<String, Map<String, Collection<String>>> rulesetCache = new HashMap<>();
@@ -75,49 +72,28 @@ class ProcessKeywords {
     private final Set<String> taskPseudoKeywords;
 
     public ProcessKeywords(Process process) {
-        PersistenceUtil persistenceUtil = Persistence.getPersistenceUtil();
-
         // keywords for title search + default search
         this.titleKeywords = filterMinLength(initTitleKeywords(process.getTitle()));
 
         // keywords for project search + default search
-        if (persistenceUtil.isLoaded(process, "project") && process.getProject() != null) {
-            String projectTitle = process.getProject().getTitle();
-            this.projectKeywords = filterMinLength(initSimpleKeywords(projectTitle));
-        } else {
-            this.projectKeywords = Collections.emptySet();
-        }
+        String projectTitle = Objects.nonNull(process.getProject()) ? process.getProject().getTitle() : "";
+        this.projectKeywords = filterMinLength(initSimpleKeywords(projectTitle));
 
         // keywords for batch search + default search
-        if (persistenceUtil.isLoaded(process, "batches")) {
-            this.batchKeywords = filterMinLength(initBatchKeywords(process.getBatches()));
-        } else {
-            this.batchKeywords = Collections.emptySet();
-        }
+        this.batchKeywords = filterMinLength(initBatchKeywords(process.getBatches()));
 
         // keywords for task search, partly in default search
-        if (persistenceUtil.isLoaded(process, "tasks")) {
-            var taskKeywordPair = initTaskKeywords(process.getTasksUnmodified());
-            this.taskKeywords = filterMinLength(taskKeywordPair.getLeft());
-            this.taskPseudoKeywords = filterMinLength(taskKeywordPair.getRight());
-        } else {
-            this.taskKeywords = Collections.emptySet();
-            this.taskPseudoKeywords = Collections.emptySet();
-        }
+        var taskKeywords = initTaskKeywords(process.getTasksUnmodified());
+        this.taskKeywords = filterMinLength(taskKeywords.getLeft()); // in default
+        this.taskPseudoKeywords = filterMinLength(taskKeywords.getRight());
 
         // more keywords for default search only
-        this.defaultKeywords = new HashSet<>();
-        if (process.getId() != null) {
+        this.defaultKeywords = new HashSet<String>();
+        if (Objects.nonNull(process.getId())) {
             defaultKeywords.add(process.getId().toString());
         }
-
-        if (persistenceUtil.isLoaded(process, "comments")) {
-            defaultKeywords.addAll(filterMinLength(initCommentKeywords(process.getComments())));
-        }
-
-        if (persistenceUtil.isLoaded(process, "ruleset")) {
-            defaultKeywords.addAll(filterMinLength(initMetadataKeywords(process)));
-        }
+        defaultKeywords.addAll(filterMinLength(initCommentKeywords(process.getComments())));
+        defaultKeywords.addAll(filterMinLength(initMetadataKeywords(process)));
 
         if (logger.isTraceEnabled()) {
             logKeywords(process.getId());
@@ -130,7 +106,7 @@ class ProcessKeywords {
      * are generated in their entirety and starting from the front or from the
      * back. The latter is more common, as the last four digits of a PPN are
      * used for the search and the hit rate is excellent.
-     * 
+     *
      * @param processTitle
      *            the title of the process
      * @return keywords
@@ -156,7 +132,7 @@ class ProcessKeywords {
     /**
      * Makes the keywords for searching by a string. These are just single
      * words.
-     * 
+     *
      * @param input
      *            the input string
      * @return keywords
@@ -173,7 +149,7 @@ class ProcessKeywords {
      * Generates the search terms by batch. Note that batch title can be
      * optional. Batch ID is not indexed because ID search is done via the
      * database.
-     * 
+     *
      * @param batches
      *            batches containing the process
      * @return batch search terms
@@ -194,7 +170,7 @@ class ProcessKeywords {
 
     /**
      * Generates all search terms by task and pseudo search terms.
-     * 
+     *
      * @param tasks
      *            tasks for the words to be generated
      * @return search terms and pseudo search terms
@@ -222,11 +198,11 @@ class ProcessKeywords {
                     }
                     if (StringUtils.isNotBlank(closedUser.getName())) {
                         taskPseudoKeywords.add(PSEUDOWORD_TASK_DONE_PROCESSING_USER + VALUE_SEPARATOR
-                            + normalize(closedUser.getName()));
+                                + normalize(closedUser.getName()));
                     }
                     if (StringUtils.isNotBlank(closedUser.getSurname())) {
                         taskPseudoKeywords.add(PSEUDOWORD_TASK_DONE_PROCESSING_USER + VALUE_SEPARATOR
-                            + normalize(closedUser.getSurname()));
+                                + normalize(closedUser.getSurname()));
                     }
                 } else {
                     String taskKeyword = taskStatus.toString().toLowerCase();
@@ -241,7 +217,7 @@ class ProcessKeywords {
     /**
      * Generates all metadata keywords and pseudowords for metadata of a METS
      * file KITODO-metadata.
-     * 
+     *
      * @param process
      *            process of the METS file
      * @return metadata keywords, and metadata pseudo keywords
@@ -292,7 +268,7 @@ class ProcessKeywords {
      * is nothing in cache, the ruleset is parsed and the map is created. Since
      * Kitodo-DataEditor is not available here, we have to do this directly, and
      * it also increases performance massively.
-     * 
+     *
      * @param file
      *            indicates a ruleset
      * @return a map
@@ -330,12 +306,12 @@ class ProcessKeywords {
 
     /**
      * Creates the keywords for searching in correction messages.
-     * 
+     *
      * @param comments
      *            the comments of a process
      * @return keywords
      */
-    private static final Set<String> initCommentKeywords(Set<Comment> comments) {
+    private static final Set<String> initCommentKeywords(List<Comment> comments) {
         Set<String> tokens = new HashSet<>();
         for (Comment comment : comments) {
             String message = comment.getMessage();
@@ -348,7 +324,7 @@ class ProcessKeywords {
 
     /**
      * Converts the string to lowercase and removes special characters.
-     * 
+     *
      * @param string
      *            string to clean
      * @return clean string in lowercase
@@ -360,7 +336,7 @@ class ProcessKeywords {
     /**
      * Splits the values ​​of a string at special characters. Groups of letters
      * and numbers written together are not split.
-     * 
+     *
      * @param value
      *            string to split
      * @return groups
@@ -374,7 +350,7 @@ class ProcessKeywords {
      * Filter minimum-length tokens. Only tokens at least three characters long
      * should be indexed, because you'll never search for tokens that are too
      * short anyway, but it would bloat the index a lot.
-     * 
+     *
      * @param tokens
      *            input set, is changed!
      * @return input set
@@ -394,7 +370,7 @@ class ProcessKeywords {
      * batches, task names, and metadata. For searching the metadata, there are
      * both the bare terms and pseudowords to particularly powerfully search the
      * various metadata keys.
-     * 
+     *
      * <p>
      * Suppose there is metadata with the key "TitleDocMain" and a value
      * containing the string "Berlin, Charlottenburg". In the ruleset,
@@ -412,12 +388,12 @@ class ProcessKeywords {
      * This means that if a user searches for "Maint title:Berlin,
      * Charlottenburg", the index has to search for:
      * {@code mainttitleqberlin mainttitleqcharlottenburg}.
-     * 
+     *
      * @return search keywords for the free search
      */
     public String getSearch() {
         Set<String> freeKeywords = new HashSet<>(initialHashMapSize(defaultKeywords, titleKeywords, projectKeywords,
-            batchKeywords, taskKeywords));
+                batchKeywords, taskKeywords));
         freeKeywords.addAll(defaultKeywords);
         freeKeywords.addAll(titleKeywords);
         freeKeywords.addAll(projectKeywords);
@@ -430,13 +406,13 @@ class ProcessKeywords {
      * Returns the search keywords for the title search. The title is sequenced
      * in a meaningful way to achieve meaningful hits even with the substring
      * search.
-     * 
+     *
      * <p>
      * A process with title "PineSeve_313539383" would be searchable as: pin,
      * pine, pines, pinese, pinesev, pineseve, ineseve, eseve, seve, eve, 313,
      * 3135, 31353, 313539, 3135393, 31353938, 313539383, 13539383, 3539383,
      * 539383, 39383, 9383, 383.
-     * 
+     *
      * @return search keywords for the title
      */
     public String getSearchTitle() {
@@ -446,7 +422,7 @@ class ProcessKeywords {
     /**
      * Returns the search keywords for the project name search. These are the
      * words from the project name in normalized form.
-     * 
+     *
      * @return search keywords for the project
      */
     public String getSearchProject() {
@@ -456,7 +432,7 @@ class ProcessKeywords {
     /**
      * Returns the search keywords for searching for operations assigned to a
      * batch. The same splitting criteria apply as for the title.
-     * 
+     *
      * @return search keywords for batches
      */
     public String getSearchBatch() {
@@ -466,18 +442,18 @@ class ProcessKeywords {
     /**
      * Returns search keywords for finding tasks. This uses pseudowords to
      * particularly powerfully search the various task states.
-     * 
+     *
      * <p>
      * Given an automated task called "OCR" and the task is running, it
      * generates the tokens: {@code ocr}, {@code automaticqocr},
      * {@code inworkqocr}.
-     * 
+     *
      * <p>
      * If a task "Quality Assurance" is finished and it was processed by John
      * Doe, the token results: {@code quality}, {@code assurance},
      * {@code closedqquality}, {@code closedqassurance},
      * {@code closeduserqjohn}, {@code closeduserqdoe}.
-     * 
+     *
      * @return search keywords for tasks
      */
     public String getSearchTask() {
@@ -500,7 +476,7 @@ class ProcessKeywords {
      * Writes the keywords to an output file in the metadata directory of the
      * process. This is only done if the log level for this class is set to
      * TRACE.
-     * 
+     *
      * @param processId
      *            metadata directory
      */
