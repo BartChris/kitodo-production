@@ -273,6 +273,17 @@ public abstract class BaseDAO<T extends BaseBean> implements Serializable {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public List<Integer> getIdsByQuery(String query, Map<String, Object> parameters, int first, int max) {
+        try (Session session = HibernateUtil.getSession()) {
+            Query<Integer> q = session.createQuery(query);
+            q.setFirstResult(first);
+            q.setMaxResults(max);
+            addParameters(q, parameters);
+            return q.list();
+        }
+    }
+
     /**
      * Count all rows in database.
      *

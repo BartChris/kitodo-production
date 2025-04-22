@@ -41,6 +41,7 @@ import org.kitodo.config.enums.ParameterCore;
 import org.kitodo.data.database.beans.Docket;
 import org.kitodo.data.database.beans.ImportConfiguration;
 import org.kitodo.data.database.beans.Process;
+import org.kitodo.data.database.beans.ProcessTableDTO;
 import org.kitodo.data.database.beans.Project;
 import org.kitodo.data.database.beans.Property;
 import org.kitodo.data.database.beans.Role;
@@ -216,11 +217,11 @@ public class ProcessForm extends TemplateBaseForm {
      * @param process the process to create a child for.
      * @return path to createProcessForm
      */
-    public String createProcessAsChild(Process process) {
+    public String createProcessAsChild(ProcessTableDTO process) {
         Stopwatch stopwatch = new Stopwatch(this.getClass(), process, "createProcessAsChild");
-        if (Objects.nonNull(process.getTemplate()) && Objects.nonNull(process.getProject())) {
-            return stopwatch.stop(CREATE_PROCESS_PATH + "&templateId=" + process.getTemplate().getId() + "&projectId="
-                    + process.getProject().getId() + "&parentId=" + process.getId());
+        if (Objects.nonNull(process)) {
+            return stopwatch.stop(CREATE_PROCESS_PATH + "&templateId=" + process.getTemplateId() + "&projectId="
+                    + process.getProjectId() + "&parentId=" + process.getId());
         }
         return stopwatch.stop("processes");
     }
