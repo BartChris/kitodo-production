@@ -19,17 +19,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Convert;
-import javax.persistence.Entity;
-import javax.persistence.ForeignKey;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-import javax.persistence.Transient;
+import javax.persistence.*;
 
 import org.kitodo.data.database.converter.TaskEditTypeConverter;
 import org.kitodo.data.database.converter.TaskStatusConverter;
@@ -122,22 +112,22 @@ public class Task extends BaseBean {
     @Column(name = "workflowId")
     private String workflowId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workflowCondition_id", foreignKey = @ForeignKey(name = "FK_task_workflowCondition_id"))
     private WorkflowCondition workflowCondition;
 
     /**
      * This field contains information about user, which works on this task.
      */
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "FK_task_user_id"))
     private User processingUser;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "template_id", foreignKey = @ForeignKey(name = "FK_task_template_id"))
     private Template template;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_task_process_id"))
     private Process process;
 
@@ -875,18 +865,16 @@ public class Task extends BaseBean {
         if (this == object) {
             return true;
         }
-
-        if (object instanceof Task) {
-            Task task = (Task) object;
-            return Objects.equals(this.getId(), task.getId());
+        if (!(object instanceof Task)) {
+            return false;
         }
-
-        return false;
+        Task task = (Task) object;
+        return Objects.equals(this.getId(), task.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(title, processingTime, processingBegin, processingEnd, process, template);
+        return Objects.hash(getId()); // Or use just `id` field directly if safe
     }
 
     /**

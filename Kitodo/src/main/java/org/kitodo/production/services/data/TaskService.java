@@ -13,18 +13,8 @@ package org.kitodo.production.services.data;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -33,14 +23,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kitodo.api.command.CommandResult;
-import org.kitodo.data.database.beans.Client;
-import org.kitodo.data.database.beans.Folder;
+import org.kitodo.data.database.beans.*;
 import org.kitodo.data.database.beans.Process;
-import org.kitodo.data.database.beans.Project;
-import org.kitodo.data.database.beans.Role;
-import org.kitodo.data.database.beans.Task;
-import org.kitodo.data.database.beans.Template;
-import org.kitodo.data.database.beans.User;
 import org.kitodo.data.database.enums.TaskEditType;
 import org.kitodo.data.database.enums.TaskStatus;
 import org.kitodo.data.database.exceptions.DAOException;
@@ -257,6 +241,48 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
         query.performIndexSearches();
         return getByQuery(query.formQueryForAll(), query.getQueryParameters(), offset, limit);
     }
+
+    public List<Integer> loadDataInt(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
+                               boolean onlyOwnTasks, boolean hideCorrectionTasks, boolean showAutomaticTasks,
+                               List<TaskStatus> taskStatus)
+            throws DAOException {
+
+        BeanQuery query = formBeanQuery(filters, onlyOwnTasks, hideCorrectionTasks, showAutomaticTasks, taskStatus);
+        query.defineSorting(SORT_FIELD_MAPPING.get(sortField), sortOrder);
+        query.performIndexSearches();
+        String idQuery = query.formQueryForAll();
+        idQuery = "SELECT task.id " + idQuery;
+        return getIdsByQuery(idQuery, query.getQueryParameters(), offset, limit);
+    }
+
+
+
+    public List<TaskTableDTO> loadDataAsDTO(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
+                               boolean onlyOwnTasks, boolean hideCorrectionTasks, boolean showAutomaticTasks,
+                               List<TaskStatus> taskStatus)
+            throws DAOException, InterruptedException {
+        List<Integer> results = loadDataInt(offset, limit, sortField, sortOrder, filters, onlyOwnTasks, hideCorrectionTasks,showAutomaticTasks, taskStatus);
+        List<Task> tasks = fetchFullTasks(results);
+        return new TaskTableDTOMapper().mapFromEntities(tasks);
+    }
+
+    public List<Task> fetchFullTasks(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        String hql = "SELECT DISTINCT t FROM Task t " +
+                "LEFT JOIN FETCH t.processingUser u " +
+                "LEFT JOIN FETCH t.process p " +
+                "LEFT JOIN FETCH p.comments c " +
+                "LEFT JOIN FETCH p.project prj " +
+                "LEFT JOIN FETCH p.template tmpl " +
+                "LEFT JOIN FETCH prj.client cl " +
+                "WHERE t.id IN (:ids)";
+
+        return dao.getByQuery(hql, Map.of("ids", ids), 0, ids.size());
+    }
+
+
 
     private BeanQuery formBeanQuery(Map<?, String> filters, boolean onlyOwnTasks, boolean hideCorrectionTasks,
             boolean showAutomaticTasks, List<TaskStatus> taskStatus) {
