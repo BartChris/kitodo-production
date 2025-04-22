@@ -1843,7 +1843,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         return propertiesForDocket;
     }
 
-    private static List<String> getDocketDataForComments(Set<Comment> comments) {
+    private static List<String> getDocketDataForComments(List<Comment> comments) {
         List<String> commentsForDocket = new ArrayList<>();
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         for (Comment comment : comments) {

@@ -12,7 +12,14 @@
 package org.kitodo.data.database.beans;
 
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -25,16 +32,12 @@ import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
-import javax.persistence.PostLoad;
-import javax.persistence.PostUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import javax.persistence.OrderColumn;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.LazyInitializationException;
-import org.hibernate.annotations.LazyCollection;
-import org.hibernate.annotations.LazyCollectionOption;
 import org.hibernate.search.mapper.pojo.automaticindexing.ReindexOnUpdate;
 import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
 import org.hibernate.search.mapper.pojo.mapping.definition.annotation.Indexed;
@@ -43,12 +46,15 @@ import org.kitodo.data.database.converter.ProcessConverter;
 import org.kitodo.data.database.enums.CorrectionComments;
 import org.kitodo.data.database.enums.TaskStatus;
 import org.kitodo.data.database.persistence.ProcessDAO;
+import org.kitodo.data.database.persistence.ProjectDAO;
 import org.kitodo.utils.Stopwatch;
 
 @Entity
 @Indexed(index = "kitodo-process")
 @Table(name = "process")
 public class Process extends BaseTemplateBean {
+    @Transient
+    private static final long MAX_AGE_NANOSS = TimeUnit.NANOSECONDS.convert(500, TimeUnit.MICROSECONDS);
 
     @Column(name = "sortHelperImages")
     private Integer sortHelperImages;
@@ -71,15 +77,15 @@ public class Process extends BaseTemplateBean {
     @Column(name = "ordering")
     private Integer ordering;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "docket_id", foreignKey = @ForeignKey(name = "FK_process_docket_id"))
     private Docket docket;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "project_id", foreignKey = @ForeignKey(name = "FK_process_project_id"))
     private Project project;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "ruleset_id", foreignKey = @ForeignKey(name = "FK_process_ruleset_id"))
     private Ruleset ruleset;
 
@@ -87,7 +93,7 @@ public class Process extends BaseTemplateBean {
     @JoinColumn(name = "template_id", foreignKey = @ForeignKey(name = "FK_process_template_id"))
     private Template template;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "parent_id", foreignKey = @ForeignKey(name = "FK_process_parent_id"))
     private Process parent;
 
@@ -95,41 +101,41 @@ public class Process extends BaseTemplateBean {
     private List<Process> children;
 
     @Transient
-    private boolean hasChildren = true;
+    private Boolean hasChildren;
 
-    @OneToMany(mappedBy = "process", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "process", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("ordering")
     private List<Task> tasks;
 
-    @OneToMany(mappedBy = "process", cascade = CascadeType.PERSIST, orphanRemoval = true, fetch = FetchType.LAZY)
-    private Set<Comment> comments;
+    @OneToMany(mappedBy = "process", cascade = CascadeType.PERSIST, orphanRemoval = true)
+    private List<Comment> comments;
 
-    @ManyToMany(cascade = CascadeType.ALL)
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinTable(name = "process_x_property",
             joinColumns = @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_process_x_property_process_id")),
             inverseJoinColumns = @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_process_x_property_property_id")))
     private List<Property> properties;
 
-    @ManyToMany(cascade = CascadeType.ALL)
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinTable(name = "template_x_property",
             joinColumns = @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_template_x_property_process_id")),
             inverseJoinColumns = @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_template_x_property_property_id")))
     private List<Property> templates;
 
-    @ManyToMany(cascade = CascadeType.ALL)
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinTable(name = "workpiece_x_property",
             joinColumns = @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_workpiece_x_property_process_id")),
             inverseJoinColumns = @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_workpiece_x_property_property_id")))
     private List<Property> workpieces;
 
-    @ManyToMany(mappedBy = "processes", fetch = FetchType.LAZY)
+    @ManyToMany(mappedBy = "processes")
     private List<Batch> batches = new ArrayList<>();
 
     @Column(name = "exported")
     private boolean exported;
 
     @Column(name = "inChoiceListShown")
-    private Boolean inChoiceListShown;
+    Boolean inChoiceListShown;
 
     @Column(name = "ocrd_workflow_id")
     private String ocrdWorkflowId;
@@ -159,6 +165,8 @@ public class Process extends BaseTemplateBean {
     @JoinColumn(name = "import_configuration_id", foreignKey = @ForeignKey(name = "FK_process_import_configuration_id"))
     private ImportConfiguration importConfiguration;
 
+    @Transient
+    private Pair<Long, Map<TaskStatus, Double>> taskProgress;
 
     /**
      * Constructor.
@@ -172,12 +180,6 @@ public class Process extends BaseTemplateBean {
         this.tasks = new ArrayList<>();
         this.inChoiceListShown = false;
         this.creationDate = new Date();
-    }
-
-    @PostLoad
-    @PostUpdate
-    private void onPostLoad() {
-        //this.hasChildren = CollectionUtils.isNotEmpty(children);
     }
 
     /**
@@ -414,6 +416,7 @@ public class Process extends BaseTemplateBean {
      * @return value of template
      */
     public Template getTemplate() {
+        initialize(new ProcessDAO(), template);
         return template;
     }
 
@@ -586,10 +589,10 @@ public class Process extends BaseTemplateBean {
      *
      * @return value of comments
      */
-    public Set<Comment> getComments() {
-        //initialize(new ProcessDAO(), this.comments);
+    public List<Comment> getComments() {
+        initialize(new ProcessDAO(), this.comments);
         if (Objects.isNull(this.comments)) {
-            this.comments = new LinkedHashSet<>();
+            this.comments = new ArrayList<>();
         }
         return this.comments;
     }
@@ -599,7 +602,7 @@ public class Process extends BaseTemplateBean {
      *
      * @param comments as List of Comment objects
      */
-    public void setComments(Set<Comment> comments) {
+    public void setComments(List<Comment> comments) {
         this.comments = comments;
     }
 
@@ -849,10 +852,10 @@ public class Process extends BaseTemplateBean {
      * @return percentage of tasks completed
      */
     public Double getProgressClosed() {
-        if (CollectionUtils.isEmpty(tasks)) {
+        if (CollectionUtils.isEmpty(tasks) && !hasChildren()) {
             return 0.0;
         }
-        return getProgressPercentageExact(TaskStatus.DONE);
+        return getTaskProgress(MAX_AGE_NANOSS).get(TaskStatus.DONE);
     }
 
     /**
@@ -863,10 +866,10 @@ public class Process extends BaseTemplateBean {
      * @return percentage of tasks in progress
      */
     public Double getProgressInProcessing() {
-        if (CollectionUtils.isEmpty(tasks)) {
+        if (CollectionUtils.isEmpty(tasks) && !hasChildren()) {
             return 0.0;
         }
-        return getProgressPercentageExact(TaskStatus.INWORK);
+        return getTaskProgress(MAX_AGE_NANOSS).get(TaskStatus.INWORK);
     }
 
     /**
@@ -878,15 +881,22 @@ public class Process extends BaseTemplateBean {
      * @return percentage of startable tasks
      */
     public Double getProgressOpen() {
-        if (CollectionUtils.isEmpty(tasks)) {
+        if (CollectionUtils.isEmpty(tasks) && !hasChildren()) {
             return 0.0;
         }
-        return getProgressPercentageExact(TaskStatus.OPEN);
+        return getTaskProgress(MAX_AGE_NANOSS).get(TaskStatus.OPEN);
     }
 
-    private Double getProgressPercentageExact(TaskStatus status) {
-        Map<TaskStatus, Double> taskProgress = ProcessConverter.getTaskProgressPercentageOfProcess(this, true);
-        return taskProgress.get(status);
+    private Map<TaskStatus, Double> getTaskProgress(long maxAgeNanos) {
+        long now = System.nanoTime();
+        if (Objects.isNull(this.taskProgress) || now - taskProgress.getLeft() > maxAgeNanos) {
+            Map<TaskStatus, Double> taskProgress = ProcessConverter.getTaskProgressPercentageOfProcess(this, true);
+            this.taskProgress = Pair.of(System.nanoTime(), taskProgress);
+        } else {
+            this.taskProgress = Pair.of(now, taskProgress.getValue());
+        }
+        Map<TaskStatus, Double> value = taskProgress.getValue();
+        return value;
     }
 
     /**
@@ -898,18 +908,17 @@ public class Process extends BaseTemplateBean {
      * 000000025075 means that 25% of the tasks are ready to be started and 75%
      * of the tasks are not yet ready to be started because previous tasks have
      * not yet been processed.
-     * 
+     *
      * @return overview of the processing status
      */
     public String getProgressCombined() {
-        Map<TaskStatus, Double> taskProgress = ProcessConverter.getTaskProgressPercentageOfProcess(this, true);
-        return ProcessConverter.getCombinedProgressFromTaskPercentages(taskProgress);
+        return ProcessConverter.getCombinedProgressFromTaskPercentages(getTaskProgress(MAX_AGE_NANOSS));
     }
 
     /**
      * Returns the record number of the parent process, if any. Is {@code null}
      * if there is no parent process above.
-     * 
+     *
      * @return record number of the parent process
      */
     public Integer getParentID() {
@@ -928,6 +937,11 @@ public class Process extends BaseTemplateBean {
         try {
             return stopwatch.stop(CollectionUtils.isNotEmpty(children));
         } catch (LazyInitializationException e) {
+            if (Objects.isNull(hasChildren)) {
+                this.hasChildren = has(new ProjectDAO(),
+                        "FROM Process AS process WHERE process.parent.id = :process_id",
+                        Collections.singletonMap("process_id", this.id));
+            }
             return stopwatch.stop(hasChildren);
         }
     }
@@ -966,7 +980,7 @@ public class Process extends BaseTemplateBean {
     /**
      * Returns the error corrections processing state of the process. The value
      * is specified as integer of {@link CorrectionComments}.
-     * 
+     *
      * @return the error corrections processing state
      */
     public Integer getCorrectionCommentStatus() {
@@ -994,7 +1008,7 @@ public class Process extends BaseTemplateBean {
 
     /**
      * Set ImportConfiguration used to create this process.
-     * 
+     *
      * @param importConfiguration
      *            ImportConfiguration used to create this process
      */
@@ -1009,7 +1023,7 @@ public class Process extends BaseTemplateBean {
 
     /**
      * When indexing, outputs the index keywords for free search.
-     * 
+     *
      * @return the index keywords for free search
      */
     @Transient
@@ -1021,7 +1035,7 @@ public class Process extends BaseTemplateBean {
 
     /**
      * When indexing, outputs the index keywords for searching in title.
-     * 
+     *
      * @return the index keywords for searching in title
      */
     @Transient
@@ -1033,7 +1047,7 @@ public class Process extends BaseTemplateBean {
 
     /**
      * When indexing, outputs the index keywords for searching by project name.
-     * 
+     *
      * @return the index keywords for searching by project name
      */
     @Transient
@@ -1046,7 +1060,7 @@ public class Process extends BaseTemplateBean {
     /**
      * When indexing, outputs the index keywords for searching for assignment to
      * batches.
-     * 
+     *
      * @return the index keywords for searching for assignment to batches
      */
     @Transient
@@ -1059,7 +1073,7 @@ public class Process extends BaseTemplateBean {
     /**
      * When indexing, outputs the index keywords for searching for task
      * information.
-     * 
+     *
      * @return the index keywords for searching for task information
      */
     @Transient

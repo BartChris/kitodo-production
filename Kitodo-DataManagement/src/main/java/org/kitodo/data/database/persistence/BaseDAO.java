@@ -300,6 +300,29 @@ public abstract class BaseDAO<T extends BaseBean> implements Serializable {
         }
     }
 
+
+    /**
+     * Check if there is at least one row in the database.
+     *
+     * @param query
+     *            for possible objects
+     * @param parameters
+     *            for query
+     * @return whether there is a rows in the database according to given query
+     */
+    public boolean has(String query, Map<String, Object> parameters) throws DAOException {
+        try (Session session = HibernateUtil.getSession()) {
+            query = "SELECT id ".concat(query);
+            debugLogQuery(query, parameters);
+            Query<?> q = session.createQuery(query);
+            addParameters(q, parameters);
+            q.setMaxResults(1);
+            return Objects.nonNull(q.uniqueResult());
+        } catch (PersistenceException e) {
+            throw new DAOException(e);
+        }
+    }
+
     /**
      * Executes an HQL query that returns scalar projections (e.g., specific fields or aggregate results)
      * instead of full entity objects.
@@ -357,6 +380,29 @@ public abstract class BaseDAO<T extends BaseBean> implements Serializable {
         try (Session session = HibernateUtil.getSession()) {
             session.update(object);
             Hibernate.initialize(list);
+            if (logger.isTraceEnabled() && !list.isEmpty()) {
+                BaseBean sample = list.iterator().next();
+                logger.trace("{} initialized {} {} instances", object, list.size(),
+                        sample.getClass().getSimpleName());
+            }
+        }
+    }
+
+    /**
+     * Initialize child object for given base bean.
+     *
+     * @param baseBean
+     *            for update
+     * @param child
+     *            child to initialize
+     */
+    public void initialize(T baseBean, BaseBean child) {
+        try (Session session = HibernateUtil.getSession()) {
+            session.update(baseBean);
+            Hibernate.initialize(child);
+            if (logger.isTraceEnabled() && Objects.nonNull(child)) {
+                logger.trace("{} initialized a {}", baseBean, child.getClass().getSimpleName());
+            }
         }
     }
 
