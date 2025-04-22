@@ -95,10 +95,10 @@ public class Project extends BaseBean implements Comparable<Project> {
     @Column(name = "active")
     private Boolean active = true;
 
-    @ManyToMany(mappedBy = "projects", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
+    @ManyToMany(mappedBy = "projects", cascade = CascadeType.PERSIST)
     private List<User> users;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Process> processes;
 
     @Transient
@@ -119,14 +119,14 @@ public class Project extends BaseBean implements Comparable<Project> {
             foreignKey = @ForeignKey(name = "FK_project_default_child_process_importconfiguration_id"))
     private ImportConfiguration defaultChildProcessImportConfiguration;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Folder> folders;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "client_id", foreignKey = @ForeignKey(name = "FK_project_client_id"))
     private Client client;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "generatorSource_folder_id", foreignKey = @ForeignKey(name = "FK_project_generatorSource_folder_id"))
     private Folder generatorSource;
 

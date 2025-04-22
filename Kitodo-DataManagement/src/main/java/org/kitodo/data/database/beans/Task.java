@@ -114,22 +114,22 @@ public class Task extends BaseBean {
     @Column(name = "workflowId")
     private String workflowId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "workflowCondition_id", foreignKey = @ForeignKey(name = "FK_task_workflowCondition_id"))
     private WorkflowCondition workflowCondition;
 
     /**
      * User working on this task.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "FK_task_user_id"))
     private User processingUser;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "template_id", foreignKey = @ForeignKey(name = "FK_task_template_id"))
     private Template template;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne
     @JoinColumn(name = "process_id", foreignKey = @ForeignKey(name = "FK_task_process_id"))
     private Process process;
 
@@ -140,7 +140,7 @@ public class Task extends BaseBean {
     @JoinTable(name = "task_x_role", joinColumns = {
             @JoinColumn(name = "task_id", foreignKey = @ForeignKey(name = "FK_task_x_role_task_id")) }, inverseJoinColumns = {
             @JoinColumn(name = "role_id", foreignKey = @ForeignKey(name = "FK_task_x_user_role_id")) })
-    private Set<Role> roles = new LinkedHashSet<>();
+    private List<Role> roles;
 
     @Transient
     private String localizedTitle;
@@ -157,7 +157,7 @@ public class Task extends BaseBean {
      */
     public Task() {
         this.title = "";
-        this.roles = new LinkedHashSet<>();
+        this.roles = new ArrayList<>();
         this.ordering = 0;
     }
 
@@ -191,7 +191,7 @@ public class Task extends BaseBean {
         this.workflowCondition = templateTask.getWorkflowCondition();
 
         // necessary to create new ArrayList in other case session problem!
-        this.roles = new LinkedHashSet<>(templateTask.getRoles());
+        this.roles = new ArrayList<>(templateTask.getRoles());
     }
 
     /**
@@ -495,10 +495,10 @@ public class Task extends BaseBean {
      *
      * @return list of Role objects or empty list
      */
-    public Set<Role> getRoles() {
+    public List<Role> getRoles() {
         //initialize(new TaskDAO(), this.roles);
         if (Objects.isNull(this.roles)) {
-            this.roles = new LinkedHashSet<>();
+            this.roles = new ArrayList<>();
         }
         return this.roles;
     }
@@ -519,7 +519,7 @@ public class Task extends BaseBean {
      * @param roles
      *            as list of Role objects
      */
-    public void setRoles(Set<Role> roles) {
+    public void setRoles(List<Role> roles) {
         this.roles = roles;
     }
 

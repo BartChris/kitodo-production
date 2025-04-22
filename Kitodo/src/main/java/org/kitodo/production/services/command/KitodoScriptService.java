@@ -718,7 +718,7 @@ public class KitodoScriptService {
         for (Process process : processes) {
             for (Task task : process.getTasks()) {
                 if (task.getTitle().equals(this.parameters.get(TASK_TITLE))) {
-                    Set<Role> roles = task.getRoles();
+                    List<Role> roles = task.getRoles();
                     if (!roles.contains(role)) {
                         roles.add(role);
                         saveTask(process.getTitle(), task);

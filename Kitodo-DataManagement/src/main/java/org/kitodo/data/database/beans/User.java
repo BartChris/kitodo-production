@@ -108,7 +108,7 @@ public class User extends BaseBean {
     @Column(name = "show_physical_page_number_below_thumbnail")
     private boolean showPhysicalPageNumberBelowThumbnail;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne
     @JoinColumn(name = "default_client_id", foreignKey = @ForeignKey(name = "FK_user_default_client_id"))
     private Client defaultClient;
 

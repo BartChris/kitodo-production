@@ -382,7 +382,7 @@ public class ProcessForm extends TemplateBaseForm {
         final Stopwatch stopwatch = new Stopwatch(this, "removeTask");
         this.process.getTasks().remove(this.task);
 
-        Set<Role> roles = this.task.getRoles();
+        List<Role> roles = this.task.getRoles();
         for (Role role : roles) {
             role.getTasks().remove(this.task);
         }
