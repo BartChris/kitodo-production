@@ -63,21 +63,21 @@ public class Comment extends BaseBean {
     /**
      * This field contains information about user, which created the comment.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "FK_comment_user_id"))
     private User author;
 
     /**
      * This field contains information about the current task when the comment is created.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "currentTask_id", foreignKey = @ForeignKey(name = "FK_comment_currentTask_id"))
     private Task currentTask;
 
     /**
      * This field contains information about the correction task where the user can correct the error.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "correctionTask_id", foreignKey = @ForeignKey(name = "FK_comment_correctionTask_id"))
     private Task correctionTask;
 

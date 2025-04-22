@@ -120,7 +120,7 @@
                 </h:panelGroup>
                 <p:tooltip for="commentIcon" styleClass="comments" trackMouse="true" rendered="#{process.hasComments}">
                     <ui:include src="/WEB-INF/templates/includes/base/commentTooltip.xhtml">
-                        <ui:param name="comments" value="#{process.commentMessages}"/>
+                        <ui:param name="comments" value="#{process.comments}"/>
                     </ui:include>
                 </p:tooltip>
             </p:column>

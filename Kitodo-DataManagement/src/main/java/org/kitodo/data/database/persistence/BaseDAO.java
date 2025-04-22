@@ -183,7 +183,7 @@ public abstract class BaseDAO<T extends BaseBean> implements Serializable {
     @SuppressWarnings("unchecked")
     public List<T> getByQuery(String query, Map<String, Object> parameters, int first, int max) {
         try (Session session = HibernateUtil.getSession()) {
-            debugLogQuery(query, parameters, first, max);
+            //debugLogQuery(query, parameters, first, max);
             Query<T> q = session.createQuery(query);
             q.setFirstResult(first);
             q.setMaxResults(max);

@@ -24,14 +24,21 @@ public class ProcessTableDTO {
     private List<ParentProcessInfo> parentProcesses;
     private boolean canCreateChildProcess;
     private boolean canBeExported;
-
     private Double progressClosed;
-
     private Double progressInProcessing;
     private Double progressOpen;
     private boolean canCreateProcessWithCalendar;
     private int templateId;
     private int projectId;
+    private List<CommentDTO> comments;
+
+    public List<CommentDTO> getComments() {
+        return comments;
+    }
+
+    public void setComments(List<CommentDTO> comments) {
+        this.comments = comments;
+    }
 
     public boolean getCanBeExported() {
         return canBeExported;
@@ -328,6 +335,54 @@ public class ProcessTableDTO {
 
         public void setProcessingUserFullName(String processingUserFullName) {
             this.processingUserFullName = processingUserFullName;
+        }
+    }
+
+    public static class CommentDTO {
+        private String message;
+        private String authorFullName;
+        private String creationDate; // Could use LocalDateTime or Date too
+        private boolean corrected;
+        private String type; // e.g., "ERROR", "INFO"
+
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+
+        public String getAuthorFullName() {
+            return authorFullName;
+        }
+
+        public void setAuthorFullName(String authorFullName) {
+            this.authorFullName = authorFullName;
+        }
+
+        public String getCreationDate() {
+            return creationDate;
+        }
+
+        public void setCreationDate(String creationDate) {
+            this.creationDate = creationDate;
+        }
+
+        public boolean isCorrected() {
+            return corrected;
+        }
+
+        public void setCorrected(boolean corrected) {
+            this.corrected = corrected;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
         }
     }
 

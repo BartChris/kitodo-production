@@ -553,7 +553,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
 
         List<Process> processes = dao.getByQuery(hql, Map.of("ids", ids), 0, ids.size());
 
-        return processes; // ✅ Now returning the version that has everything
+        return processes;
     }
 
 
@@ -579,50 +579,43 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         } catch (DAOException | IOException e) {
             Helper.setErrorMessage(e.getMessage());
         }
-        List<String> commentMessages = new ArrayList<>();
-        int correctionStatus = 0;
-        String lastComment = "";
+
         List<Comment> commentList = commentsMap.getOrDefault(process.getId(), Collections.emptyList());
+
+        String lastComment = "";
         if (!commentList.isEmpty()) {
             Comment last = commentList.get(commentList.size() - 1);
             lastComment = last.getMessage();
         }
 
+        int correctionStatus = 0;
+        List<ProcessTableDTO.CommentDTO> commentDTOs = new ArrayList<>();
+
         for (Comment comment : commentList) {
-            boolean isError = true; // If this is ever dynamic, update accordingly
+            ProcessTableDTO.CommentDTO dtoComment = new ProcessTableDTO.CommentDTO();
+            dtoComment.setMessage(comment.getMessage());
+            dtoComment.setAuthorFullName(comment.getAuthor() != null ? comment.getAuthor().getFullName() : "-");
+            dtoComment.setCreationDate(comment.getCreationDate().toString()); // Or format as needed
+            dtoComment.setCorrected(comment.isCorrected());
+            dtoComment.setType("ERROR"); // If you ever support other types, adjust here
 
-            StringBuilder sb = new StringBuilder();
-            if (isError) {
-                sb.append("[!]");
-            }
-
-            String name = "-";
-            if (comment.getAuthor() != null) {
-                name = comment.getAuthor().getFullName();
-            }
-
-            sb.append(" ")
-                    .append(comment.getCreationDate())
-                    .append(" - ")
-                    .append(name)
-                    .append(": ")
-                    .append(comment.getMessage());
-
-            commentMessages.add(sb.toString());
+            commentDTOs.add(dtoComment);
 
             // Determine correction status
-            if (isError) {
-                if (comment.isCorrected()) {
+            if ("ERROR".equals(dtoComment.getType())) {
+                if (dtoComment.isCorrected()) {
                     correctionStatus = Math.max(correctionStatus, 1);
                 } else {
                     correctionStatus = 2;
-                    break; // Highest severity reached
+                    break;
                 }
             }
         }
-        dto.setCommentMessages(commentMessages);
+        dto.setCorrectionCommentStatus(correctionStatus);
+
+        dto.setComments(commentDTOs);
         dto.setLastComment(lastComment);
-        dto.setHasComments(!commentMessages.isEmpty());
+        dto.setHasComments(!commentDTOs.isEmpty());
         dto.setProjectTitle(process.getProject().getTitle());
 
 
@@ -2331,16 +2324,17 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
      */
     public static boolean canCreateChildProcess(Process process) throws DAOException,
             IOException {
-        Collection<String> functionalDivisions;
-        if (Objects.isNull(process.getRuleset())) {
+        Ruleset ruleset = process.getRuleset();
+        if (Objects.isNull(ruleset)) {
             return false;
         }
-        Integer rulesetId = process.getRuleset().getId();
+        Collection<String> functionalDivisions;
+        Integer rulesetId = ruleset.getId();
         if (RULESET_CACHE_FOR_CREATE_CHILD_FROM_PARENT.containsKey(rulesetId)) {
             functionalDivisions = RULESET_CACHE_FOR_CREATE_CHILD_FROM_PARENT.get(rulesetId);
         } else {
-            Ruleset ruleset = ServiceManager.getRulesetService().getById(rulesetId);
-            functionalDivisions = ServiceManager.getRulesetService().openRuleset(ruleset)
+            functionalDivisions = ServiceManager.getRulesetService()
+                    .openRuleset(ruleset)
                     .getFunctionalDivisions(FunctionalDivision.CREATE_CHILDREN_FROM_PARENT);
             RULESET_CACHE_FOR_CREATE_CHILD_FROM_PARENT.put(rulesetId, functionalDivisions);
         }

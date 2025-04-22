@@ -1,15 +1,29 @@
 <ui:composition
+        xmlns="http://www.w3.org/1999/xhtml"
         xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
-        xmlns:h="http://xmlns.jcp.org/jsf/html"
-        xmlns:c="http://xmlns.jcp.org/jsp/jstl/core">
+        xmlns:p="http://primefaces.org/ui"
+        xmlns:h="http://java.sun.com/jsf/html"
+        xmlns:f="http://java.sun.com/jsf/core">
+    <!--@elvariable id="comments" type="java.util.List<org.kitodo.data.database.beans.ProcessTableDTO.CommentDTO>"-->
 
-    <!--@elvariable id="comments" type="java.util.List<java.lang.String>"-->
+    <p:dataView var="comment" value="#{comments}" listIcon="false">
+        <p:dataViewListItem>
+            <h:panelGrid columns="4" columnClasses="icon,date,name,message">
 
-    <h:panelGroup layout="block">
-        <ui:repeat value="#{comments}" var="comment">
-            <h:outputText value="#{comment}" escape="false"/>
-            <br/>
-        </ui:repeat>
-    </h:panelGroup>
+                <h:panelGroup>
+                    <h:outputText id="commentIcon"
+                                  styleClass="fa fa-exclamation-circle correction #{comment.corrected ? 'corrected' : ''}"
+                                  rendered="#{comment.type eq 'ERROR'}"/>
+                </h:panelGroup>
 
+                <h:outputText value="#{comment.creationDate}">
+                    <f:convertDateTime pattern="dd.MM.yyyy HH:mm"/>
+                </h:outputText>
+
+                <h:outputText value="#{comment.authorFullName}:"/>
+
+                <h:outputText value="#{comment.message}"/>
+            </h:panelGrid>
+        </p:dataViewListItem>
+    </p:dataView>
 </ui:composition>
