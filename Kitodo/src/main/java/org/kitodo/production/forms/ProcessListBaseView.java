@@ -628,6 +628,25 @@ public class ProcessListBaseView extends BaseForm {
     }
 
     /**
+     * Check and return whether process with given ID can be exported or not.
+     *
+     * @param processId process ID
+     * @return whether process with given ID can be exported or not
+     */
+    public boolean canBeExported(int processId) {
+        Stopwatch stopwatch = new Stopwatch(this.getClass(), processId, "canBeExported");
+        try {
+            if (!exportable.containsKey(processId)) {
+                exportable.put(processId, ProcessService.canBeExported(processId));
+            }
+            return stopwatch.stop(exportable.get(processId));
+        } catch (IOException | DAOException e) {
+            Helper.setErrorMessage(e);
+            return stopwatch.stop(false);
+        }
+    }
+
+    /**
      * Update selection and first row to show in datatable on PageEvent.
      * @param pageEvent PageEvent triggered by data tables paginator
      */

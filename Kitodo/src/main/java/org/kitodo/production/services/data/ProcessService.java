@@ -57,6 +57,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -498,16 +499,24 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         return getIdsByQuery(idQuery, query.getQueryParameters(), offset, limit);
     }
 
-
+    public List<ProcessTableDTO> loadDataAsDTO(int first, int pageSize, String sortField,
+                                               SortOrder sortOrder, Map<?, String> filters) throws DAOException {
+        return loadDataAsDTO(first, pageSize, sortField, sortOrder, filters, false, false);
+    }
 
     public List<ProcessTableDTO> loadDataAsDTO(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
                                                boolean showClosedProcesses, boolean showInactiveProjects) throws DAOException {
         List<Integer> results = loadDataInt(offset, limit, sortField, sortOrder, filters, showClosedProcesses, showInactiveProjects);
         List<Process> processdata = fetchFullProcesses(results);
-        List<Integer> actualProcessIds = processdata.stream()
+        Map<Integer, Process> processById = processdata.stream()
+                .collect(Collectors.toMap(Process::getId, Function.identity()));
+        List<Process> sortedProcessList = results.stream()
+                .map(processById::get)
+                .filter(Objects::nonNull) // optional: handles missing ones safely
+                .collect(Collectors.toList());
+        List<Integer> actualProcessIds = sortedProcessList.stream()
                 .map(Process::getId)
                 .collect(Collectors.toList());
-
         Map<Integer, Map<TaskStatus, Double>> progressMap =
                 ServiceManager.getTaskService().getProgressPercentagesForProcesses(actualProcessIds);
         Map<Integer, String> lastEditingUserMap = ServiceManager.getTaskService().getLastEditingUserNamesByProcessIds(actualProcessIds);
@@ -531,7 +540,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             }
         }
         List<ProcessTableDTO> dtoList = new ArrayList<>();
-        for (Process process : processdata) {
+        for (Process process : sortedProcessList) {
             ProcessTableDTO dto = mapToProcessDto(process, progressMap, lastEditingUserMap, exportableStatus,
                     commentsMap, processTasksMap, childrenNumberMap);
             dtoList.add(dto);
@@ -2623,7 +2632,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             Integer processId = (Integer) row[0];
             Boolean noGeneratorSource = (Boolean) row[1];
             Integer numberOfChildren = numberOfChildrenMap.getOrDefault(processId, 0);
-            // ✅ logic: process is exportable if it has children OR no generator source
+            //process is exportable if it has children OR no generator source
             exportableMap.put(processId, numberOfChildren > 0 || Boolean.TRUE.equals(noGeneratorSource));
         }
 

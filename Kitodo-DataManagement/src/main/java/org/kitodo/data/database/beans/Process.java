@@ -38,8 +38,6 @@ import javax.persistence.Transient;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.LazyInitializationException;
-import org.hibernate.annotations.LazyCollection;
-import org.hibernate.annotations.LazyCollectionOption;
 import org.hibernate.search.mapper.pojo.automaticindexing.ReindexOnUpdate;
 import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
 import org.hibernate.search.mapper.pojo.mapping.definition.annotation.Indexed;
@@ -109,7 +107,6 @@ public class Process extends BaseTemplateBean {
     @OrderBy("ordering")
     private List<Task> tasks;
 
-    @LazyCollection(LazyCollectionOption.FALSE)
     @OneToMany(mappedBy = "process", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<Comment> comments;
 
@@ -132,7 +129,6 @@ public class Process extends BaseTemplateBean {
                 @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_workpiece_x_property_property_id")) })
     private List<Property> workpieces;
 
-    @LazyCollection(LazyCollectionOption.FALSE)
     @ManyToMany(mappedBy = "processes")
     private List<Batch> batches = new ArrayList<>();
 
