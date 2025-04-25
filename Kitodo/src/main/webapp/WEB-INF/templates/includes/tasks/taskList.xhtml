@@ -29,7 +29,7 @@
                      paginator="true"
                      resizableColumns="true"
                      liveResize="true"
-                     sortBy="#{item.title.keyword}"
+                     sortBy="#{item.title}"
                      rows="#{LoginForm.loggedUser.tableSize}"
                      paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {JumpToPageInput} {NextPageLink} {LastPageLink}"
                      currentPageReportTemplate="#{msgs.currentPageReportTemplate}"
@@ -43,7 +43,7 @@
             </p:column>
 
             <p:column id="titleColumn" headerText="#{msgs.title}"
-                      sortBy="#{item.title.keyword}"
+                      sortBy="#{item.title}"
                       rendered="#{CurrentTaskForm.showColumn('task.title')}">
                 <h:outputText title="#{item.title}" value="#{item.title}"/>
             </p:column>
@@ -72,19 +72,19 @@
                 <h:panelGroup class="task-status"
                               title="#{item.processingStatusTitle}"
                               style="margin-right:10px; background-color:
-                                #{item.processingStatus.title == 'statusDone' ? 'var(--green)' : ''}
-                                #{item.processingStatus.title == 'statusInProcessing' ? 'var(--light-green)' : ''}
-                                #{item.processingStatus.title == 'statusOpen' ? 'var(--light-orange)' : ''}
-                                #{item.processingStatus.title == 'statusLocked' ? 'var(--orange)' : ''};"
+                                #{item.processingStatus == 'DONE' ? 'var(--green)' : ''}
+                                #{item.processingStatus == 'INWORK' ? 'var(--light-green)' : ''}
+                                #{item.processingStatus == 'OPEN' ? 'var(--light-orange)' : ''}
+                                #{item.processingStatus == 'LOCKED' ? 'var(--orange)' : ''};"
                 />
             </p:column>
 
             <p:column id="processingUserColumn"
                       headerText="#{msgs.lastEditingUser}"
-                      sortBy="#{item.processingUser.name.keyword}"
+                      sortBy="#{item.processingUserFullName}"
                       rendered="#{CurrentTaskForm.showColumn('task.lastEditingUser')}">
-                <h:outputText value="#{item.processingUser ne null ? item.processingUser.fullName : ''}"
-                              title="#{item.processingUser ne null ? item.processingUser.fullName : ''}"/>
+                <h:outputText title="#{item.processingUserFullName}" value="#{item.processingUserFullName}"/>
+
             </p:column>
 
             <p:column id="processingBeginColumn"
@@ -106,16 +106,30 @@
             </p:column>
 
             <p:column styleClass="comment-column genericSortIcon"
-                      width="85"
+                      width="150"
                       rendered="#{CurrentTaskForm.showColumn('task.comments')}"
                       sortBy="#{item.correctionCommentStatus}"
                       headerText="#{msgs.comments}">
-                <h:panelGroup id="commentIcon">
-                    <h:panelGroup styleClass="fa
-                        #{item.correctionCommentStatus gt 0 ? 'fa-exclamation-circle correction' : 'fa-comment'}
-                        #{item.correctionCommentStatus eq 1 ? 'corrected' : ''}"/>
+                <h:panelGroup id="commentIconText" layout="block">
+                    <h:outputText
+                            styleClass="#{
+                    item.correctionCommentStatus eq 0
+                        ? 'fa fa-comment'
+                        : item.correctionCommentStatus eq 1
+                            ? 'fa fa-exclamation-circle correction corrected'
+                            : 'fa fa-exclamation-circle correction'
+                }"
+                            rendered="#{not empty item.correctionComment}"
+                            value=" " />
+                    <h:outputText
+                            value="#{item.correctionComment}"
+                            style="margin-left: 0.5rem;"
+                            rendered="#{not empty item.correctionComment}" />
                 </h:panelGroup>
-                <p:tooltip for="commentIcon" styleClass="comments" trackMouse="true"/>
+                <p:tooltip for="commentIconText"
+                           value="#{item.correctionComment}"
+                           trackMouse="true"
+                           rendered="#{not empty item.correctionComment}" />
             </p:column>
 
             <p:columns value="#{CurrentTaskForm.getTaskCustomColumnNames()}"
@@ -185,8 +199,7 @@
                                           value="#{ProcessForm.getFormattedDate(item.processingTime)}"/>
 
                             <h:outputText value="#{msgs.lastUpdatedBy}:"/>
-                            <h:outputText title="#{item.processingUser.fullName}"
-                                          value="#{item.processingUser.fullName}"/>
+                            <h:outputText title="#{item.processingUserFullName}" value="#{item.processingUserFullName}"/>
 
                             <h:outputText value="#{msgs.editType}:"/>
                             <h:outputText title="#{item.editTypeTitle}" value="#{item.editTypeTitle}"/>

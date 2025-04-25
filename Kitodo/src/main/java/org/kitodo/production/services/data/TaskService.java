@@ -19,12 +19,15 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kitodo.api.command.CommandResult;
 import org.kitodo.data.database.beans.*;
 import org.kitodo.data.database.beans.Process;
+import org.kitodo.data.database.enums.CommentType;
+import org.kitodo.data.database.enums.CorrectionComments;
 import org.kitodo.data.database.enums.TaskEditType;
 import org.kitodo.data.database.enums.TaskStatus;
 import org.kitodo.data.database.exceptions.DAOException;
@@ -242,18 +245,7 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
         return getByQuery(query.formQueryForAll(), query.getQueryParameters(), offset, limit);
     }
 
-    public List<Integer> loadDataInt(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
-                               boolean onlyOwnTasks, boolean hideCorrectionTasks, boolean showAutomaticTasks,
-                               List<TaskStatus> taskStatus)
-            throws DAOException {
 
-        BeanQuery query = formBeanQuery(filters, onlyOwnTasks, hideCorrectionTasks, showAutomaticTasks, taskStatus);
-        query.defineSorting(SORT_FIELD_MAPPING.get(sortField), sortOrder);
-        query.performIndexSearches();
-        String idQuery = query.formQueryForAll();
-        idQuery = "SELECT task.id " + idQuery;
-        return getIdsByQuery(idQuery, query.getQueryParameters(), offset, limit);
-    }
 
 
     public List<TaskTableDTO> loadDataAsDTO(int first, int pageSize, String sortField, SortOrder sortOrder, Map filters)
@@ -271,7 +263,25 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
             throws DAOException {
         List<Integer> results = loadDataInt(offset, limit, sortField, sortOrder, filters, onlyOwnTasks, hideCorrectionTasks,showAutomaticTasks, taskStatus);
         List<Task> tasks = fetchFullTasks(results);
-        return new TaskTableDTOMapper().mapFromEntities(tasks);
+        Map<Integer, Pair<String, String>> processAndProjectTitlesByTaskIds = getProcessAndProjectTitlesByTaskIds(results);
+        Map<Integer, Integer> correctionCommentStatusValuesByTaskIds = getCorrectionCommentStatusValuesByTaskIds(results);
+        Map<Integer, Pair<Integer, String>> processingUsersByTaskIds = getProcessingUserInfoByTaskIds(results);
+        Map<Integer, String> correctionCommentsByTaskIds = getCorrectionCommentsByTaskIds(results);
+        return new TaskTableDTOMapper().mapFromEntities(tasks, processAndProjectTitlesByTaskIds,
+                correctionCommentStatusValuesByTaskIds, processingUsersByTaskIds, correctionCommentsByTaskIds);
+    }
+
+    public List<Integer> loadDataInt(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
+                                     boolean onlyOwnTasks, boolean hideCorrectionTasks, boolean showAutomaticTasks,
+                                     List<TaskStatus> taskStatus)
+            throws DAOException {
+
+        BeanQuery query = formBeanQuery(filters, onlyOwnTasks, hideCorrectionTasks, showAutomaticTasks, taskStatus);
+        query.defineSorting(SORT_FIELD_MAPPING.get(sortField), sortOrder);
+        query.performIndexSearches();
+        String idQuery = query.formQueryForAll();
+        idQuery = "SELECT task.id " + idQuery;
+        return getIdsByQuery(idQuery, query.getQueryParameters(), offset, limit);
     }
 
     public List<Task> fetchFullTasks(List<Integer> ids) {
@@ -279,16 +289,13 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
             return Collections.emptyList();
         }
         String hql = "SELECT DISTINCT t FROM Task t " +
-                "LEFT JOIN FETCH t.processingUser u " +
-                "LEFT JOIN FETCH t.process p " +
-                "LEFT JOIN FETCH p.comments c " +
-                "LEFT JOIN FETCH p.project prj " +
-                "LEFT JOIN FETCH p.template tmpl " +
-                "LEFT JOIN FETCH prj.client cl " +
+                "LEFT JOIN FETCH t.processingUser " +
                 "WHERE t.id IN (:ids)";
 
         return dao.getByQuery(hql, Map.of("ids", ids), 0, ids.size());
     }
+
+
 
 
 
@@ -372,6 +379,158 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
         return super.dao.getStringsByQuery(beanQuery.formQueryForDistinct("title", true),
                 beanQuery.getQueryParameters());
     }
+
+
+    public Map<Integer, Pair<String, String>> getProcessAndProjectTitlesByTaskIds(List<Integer> taskIds) {
+        if (taskIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        // Query to fetch process titles and project titles for all tasks
+        String hql = "SELECT DISTINCT t.id, p.title, prj.title FROM Task t " +
+                "LEFT JOIN t.process p " +
+                "LEFT JOIN p.project prj " +
+                "WHERE t.id IN (:taskIds)";
+
+        List<Object[]> results = dao.getProjectionByQuery(hql, Map.of("taskIds", taskIds));
+
+        // Map to hold process and project titles by task ID
+        Map<Integer, Pair<String, String>> titlesByTaskId = new HashMap<>();
+
+        for (Object[] result : results) {
+            Integer taskid = (Integer) result[0];
+            String processTitle = (String) result[1];
+            String projectTitle = (String) result[2];
+
+            // Use ImmutablePair to store processTitle and projectTitle together
+            titlesByTaskId.put(taskid, new ImmutablePair<>(processTitle, projectTitle));
+        }
+
+        return titlesByTaskId;
+    }
+
+    public Map<Integer, Pair<Integer, String>> getProcessingUserInfoByTaskIds(List<Integer> taskIds) {
+        if (taskIds == null || taskIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql = "SELECT DISTINCT t.id, u.id, u.name, u.surname " +
+                "FROM Task t " +
+                "JOIN t.processingUser u " +
+                "WHERE t.id IN :taskIds";
+
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("taskIds", taskIds);
+
+        List<Object[]> rows = dao.getProjectionByQuery(hql, parameters);
+        Map<Integer, Pair<Integer, String>> userInfoByTaskId = new HashMap<>(rows.size());
+
+        for (Object[] row : rows) {
+            Integer taskId = (Integer) row[0];
+            Integer userId = (Integer) row[1];
+            String name = (String) row[2];
+            String surname = (String) row[3];
+
+            String fullName = (name != null ? name : "") + " " + (surname != null ? surname : "");
+            userInfoByTaskId.put(taskId, new ImmutablePair<>(userId, fullName.trim()));
+        }
+
+        return userInfoByTaskId;
+    }
+
+
+
+    /**
+     * Retrieves the correction comment status as an integer for each task ID,
+     * based on the comments attached to their associated processes.
+     *
+     * Status is returned as integer values from the CorrectionComments enum.
+     *
+     * @param taskIds list of task IDs
+     * @return map of task ID to correction comment status as int
+     */
+    public Map<Integer, Integer> getCorrectionCommentStatusValuesByTaskIds(List<Integer> taskIds) {
+        if (taskIds == null || taskIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql =
+                "SELECT t.id, " +
+                        "       SUM(CASE WHEN c.type = :errorType THEN 1 ELSE 0 END), " +
+                        "       SUM(CASE WHEN c.type = :errorType AND c.corrected = false THEN 1 ELSE 0 END) " +
+                        "FROM Task t " +
+                        "LEFT JOIN t.process p " +
+                        "LEFT JOIN Comment c ON c.process = p " +
+                        "WHERE t.id IN (:taskIds) " +
+                        "GROUP BY t.id";
+
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("taskIds", taskIds);
+        parameters.put("errorType", CommentType.ERROR);
+
+        List<Object[]> rows = dao.getProjectionByQuery(hql, parameters);
+        return getIntegerIntegerMap(taskIds, rows);
+    }
+
+    public Map<Integer, String> getCorrectionCommentsByTaskIds(List<Integer> taskIds) {
+        if (taskIds == null || taskIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql =
+                "SELECT t.id, c.message " +
+                        "FROM Task t " +
+                        "JOIN t.process p " +
+                        "JOIN p.comments c " +
+                        "WHERE t.id IN :taskIds " +
+                        "ORDER BY c.creationDate DESC";
+
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("taskIds", taskIds);
+
+        List<Object[]> results = dao.getProjectionByQuery(hql, parameters);
+
+        Map<Integer, String> commentByTaskId = new HashMap<>();
+        for (Object[] row : results) {
+            Integer taskId = (Integer) row[0];
+            if (!commentByTaskId.containsKey(taskId)) {
+                commentByTaskId.put(taskId, (String) row[1]);
+            }
+        }
+
+        return commentByTaskId;
+    }
+
+
+
+    private static Map<Integer, Integer> getIntegerIntegerMap(List<Integer> taskIds, List<Object[]> rows) {
+        Map<Integer, Integer> statusByTaskId = new HashMap<>();
+
+        for (Object[] row : rows) {
+            Integer taskId = (Integer) row[0];
+            Long errorCount = (Long) row[1];
+            Long uncorrectedCount = (Long) row[2];
+
+            int status;
+            if (errorCount == 0) {
+                status = CorrectionComments.NO_CORRECTION_COMMENTS.getValue();
+            } else if (uncorrectedCount > 0) {
+                status = CorrectionComments.OPEN_CORRECTION_COMMENTS.getValue();
+            } else {
+                status = CorrectionComments.NO_OPEN_CORRECTION_COMMENTS.getValue();
+            }
+
+            statusByTaskId.put(taskId, status);
+        }
+
+        for (Integer taskId : taskIds) {
+            statusByTaskId.putIfAbsent(taskId, CorrectionComments.NO_CORRECTION_COMMENTS.getValue());
+        }
+        return statusByTaskId;
+    }
+
+
+
 
     /**
      * Convert date of processing begin to formatted String.

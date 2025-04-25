@@ -2,9 +2,10 @@ package org.kitodo.data.database.beans;
 
 import org.kitodo.data.database.enums.TaskStatus;
 
+import java.util.Date;
+
 public class TaskTableDTO {
     private Integer id;
-
     private String title;
 
     private String processTitle;
@@ -12,13 +13,15 @@ public class TaskTableDTO {
     private String projectTitle;
 
     private String processCreationDate;
+
+    private String processingStatus;
     private String processingStatusTitle;
 
-    private User processingUser;
     private String processingUserFullName;
 
-    //private Date processingBegin;
-    //private Date processingEnd;
+    private Date processingBegin;
+    private Date processingEnd;
+    private Date processingTime;
 
     private boolean correction;
     private int correctionCommentStatus;
@@ -28,7 +31,18 @@ public class TaskTableDTO {
     private boolean batchStep;
     private boolean batchAvailable;
 
-    private String processingStatus;
+    private Integer processingUserId;
+
+
+
+    private String correctionComment;
+
+    public String getCorrectionComment() {
+        return correctionComment;
+    }
+    public void setCorrectionComment(String correctionComment) {
+        this.correctionComment = correctionComment;
+    }
 
     public Integer getId() {
         return id;
@@ -38,23 +52,13 @@ public class TaskTableDTO {
         this.id = id;
     }
 
-
-    public void setProjectTitle(String projectTitle) {
-        this.projectTitle = projectTitle;
+    public Integer getProcessingUserId() {
+        return processingUserId;
     }
 
-    public String getProjectTitle() {
-        return projectTitle;
+    public void setProcessingUserId(Integer processingUserId) {
+        this.processingUserId = processingUserId;
     }
-
-    public void setProcessCreationDate(String processCreationDate) {
-        this.processCreationDate = processCreationDate;
-    }
-
-    public String getProcessCreationDate() {
-        return processCreationDate;
-    }
-
 
     public String getTitle() {
         return title;
@@ -63,7 +67,6 @@ public class TaskTableDTO {
     public void setTitle(String title) {
         this.title = title;
     }
-
 
     public String getProcessTitle() {
         return processTitle;
@@ -81,32 +84,36 @@ public class TaskTableDTO {
         this.processId = processId;
     }
 
-    public String getProcessingStatusTitle() {
-        return processingStatusTitle;
+    public String getProjectTitle() {
+        return projectTitle;
     }
 
+    public void setProjectTitle(String projectTitle) {
+        this.projectTitle = projectTitle;
+    }
 
+    public String getProcessCreationDate() {
+        return processCreationDate;
+    }
 
-    public void setProcessingStatusTitle(String processingStatusTitle) {
-        this.processingStatusTitle = processingStatusTitle;
+    public void setProcessCreationDate(String processCreationDate) {
+        this.processCreationDate = processCreationDate;
     }
 
     public String getProcessingStatus() {
         return processingStatus;
     }
 
-
-
     public void setProcessingStatus(String processingStatus) {
-        this.processingStatus = processingStatusTitle;
+        this.processingStatus = processingStatus;
     }
 
-    public User getProcessingUser() {
-        return processingUser;
+    public String getProcessingStatusTitle() {
+        return processingStatusTitle;
     }
 
-    public void setProcessingUser(User processingUser) {
-        this.processingUser = processingUser;
+    public void setProcessingStatusTitle(String processingStatusTitle) {
+        this.processingStatusTitle = processingStatusTitle;
     }
 
     public String getProcessingUserFullName() {
@@ -117,11 +124,35 @@ public class TaskTableDTO {
         this.processingUserFullName = processingUserFullName;
     }
 
-    public boolean isCorrection() {
+    public Date getProcessingBegin() {
+        return processingBegin;
+    }
+
+    public void setProcessingBegin(Date processingBegin) {
+        this.processingBegin = processingBegin;
+    }
+
+    public Date getProcessingEnd() {
+        return processingEnd;
+    }
+
+    public void setProcessingEnd(Date processingEnd) {
+        this.processingEnd = processingEnd;
+    }
+
+    public Date getProcessingTime() {
+        return processingTime;
+    }
+
+    public void setProcessingTime(Date processingTime) {
+        this.processingTime = processingTime;
+    }
+
+    public boolean getIsCorrection() {
         return correction;
     }
 
-    public void setCorrection(boolean correction) {
+    public void setIsCorrection(boolean correction) {
         this.correction = correction;
     }
 
@@ -141,7 +172,7 @@ public class TaskTableDTO {
         this.editTypeTitle = editTypeTitle;
     }
 
-    public boolean isBatchStep() {
+    public boolean getBatchStep() {
         return batchStep;
     }
 
@@ -149,12 +180,11 @@ public class TaskTableDTO {
         this.batchStep = batchStep;
     }
 
-    public boolean isBatchAvailable() {
-        return batchAvailable;
+    public boolean getBatchAvailable(boolean batchAvailable) {
+       return batchAvailable;
     }
 
     public void setBatchAvailable(boolean batchAvailable) {
         this.batchAvailable = batchAvailable;
     }
-
 }
