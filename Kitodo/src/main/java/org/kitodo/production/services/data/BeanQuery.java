@@ -53,6 +53,8 @@ public class BeanQuery {
     private Pair<String, String> sorting = Pair.of("id", "ASC");
     private final Map<String, Pair<FilterField, String>> indexQueries = new HashMap<>();
     private final Map<String, Object> parameters = new HashMap<>();
+    private boolean useDistinct = false;
+
 
     /**
      * Constructor. Creates a new query builder instance.
@@ -387,13 +389,21 @@ public class BeanQuery {
     public String formQueryForAll() {
         StringBuilder query = new StringBuilder(512);
         if (!extensions.isEmpty()) {
-            query.append("SELECT ").append(varName).append(' ');
+            query.append("SELECT ");
+            if (useDistinct) {
+                query.append("DISTINCT ");
+            }
+            query.append(varName).append(' ');
         }
         innerFormQuery(query);
         if (Objects.nonNull(sorting)) {
             query.append(" ORDER BY ").append(sorting.getKey()).append(' ').append(sorting.getValue());
         }
         return query.toString();
+    }
+
+    public void enableDistinct() {
+        this.useDistinct = true;
     }
 
     /**

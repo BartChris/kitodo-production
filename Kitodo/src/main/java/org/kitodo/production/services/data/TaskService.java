@@ -253,6 +253,7 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
         BeanQuery query = formBeanQuery(filters, onlyOwnTasks, hideCorrectionTasks, showAutomaticTasks, taskStatus);
         query.defineSorting(SORT_FIELD_MAPPING.get(sortField), sortOrder);
         query.performIndexSearches();
+        query.enableDistinct();
         return getByQuery(query.formQueryForAll(), query.getQueryParameters(), offset, limit);
     }
 
