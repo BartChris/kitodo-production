@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -45,7 +46,7 @@ public class BeanQuery {
     private final Class<? extends BaseBean> beanClass;
     private final String className;
     private final String varName;
-    private final Collection<String> extensions = new ArrayList<>();
+    private final Collection<String> extensions = new LinkedHashSet<>();
     private final Collection<String> restrictions = new ArrayList<>();
     private final List<String> restrictionAlternatives = new ArrayList<>();
     private boolean indexFiltersAsAlternatives = false;
@@ -231,7 +232,9 @@ public class BeanQuery {
                 restrictions.add(varName + ".project.client.id = :sessionClientId");
                 break;
             case "Task":
-                restrictions.add(varName + ".process.project.client.id = :sessionClientId");
+                extensions.add(varName + ".process process");
+                extensions.add("process.project project");
+                restrictions.add("project.client.id = :sessionClientId");
                 break;
             default:
                 throw new IllegalStateException("BeanQuery.restrictToClient() not yet implemented for ".concat(
@@ -262,8 +265,11 @@ public class BeanQuery {
                 restrictions.add(varName + ".project.id IN (:projectIDs)");
                 break;
             case "Task":
-                restrictions.add(varName + ".process.project.id IN (:projectIDs)");
+                extensions.add(varName + ".process process");
+                extensions.add("process.project project");
+                restrictions.add("project.id IN (:projectIDs)");
                 break;
+
             default:
                 throw new IllegalStateException("BeanQuery.restrictToProjects() not yet implemented for ".concat(
                     className));
@@ -284,28 +290,20 @@ public class BeanQuery {
      *            roles of the task
      */
     public void restrictToRoles(List<Role> roles) {
-        int rolesSize = roles.size();
-        boolean multipleRoles = rolesSize > 1;
-        StringBuilder restriction = new StringBuilder();
-        for (int i = 0; i < rolesSize; i++) {
-            String roleVarName = "role" + (i + 1);
-            if (multipleRoles) {
-                boolean firstIteration = (i == 0);
-                restriction.append(firstIteration ? "(" : " OR ");
-            }
-            restriction.append(':');
-            restriction.append(roleVarName);
-            restriction.append(" IN elements(");
-            restriction.append(varName);
-            restriction.append(".roles)");
-            boolean lastIteration = (i == rolesSize - 1);
-            if (multipleRoles && lastIteration) {
-                restriction.append(')');
-            }
-            parameters.put(roleVarName, roles.get(i));
+        if (roles == null || roles.isEmpty()) {
+            return;
         }
-        restrictions.add(restriction.toString());
+
+        List<Integer> roleIds = roles.stream()
+                .map(Role::getId)
+                .collect(Collectors.toList());
+
+        extensions.add(varName + ".roles role");
+        restrictions.add("role.id IN (:roleIds)");
+        parameters.put("roleIds", roleIds);
     }
+
+
 
     /**
      * Adds search restrictions entered by the user in the filter input.
