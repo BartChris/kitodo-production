@@ -13,16 +13,8 @@ package org.kitodo.production.services.data;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -884,6 +876,117 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
             return templateTasks.get(0).getId();
         }
         return -1;
+    }
+
+    public Map<Integer, Map<TaskStatus, Double>> getProgressPercentagesForProcesses(List<Integer> processIds) {
+        List<Object[]> results = dao.getTaskStatusCountsByProcessIds(processIds);
+
+        Map<Integer, Map<TaskStatus, Integer>> rawCounts = new HashMap<>();
+
+        for (Object[] row : results) {
+            Integer processId = (Integer) row[0];
+            TaskStatus status = (TaskStatus) row[1];
+            Long count = (Long) row[2];
+
+            rawCounts
+                    .computeIfAbsent(processId, k -> new EnumMap<>(TaskStatus.class))
+                    .merge(status, count.intValue(), Integer::sum);
+        }
+
+        Map<Integer, Map<TaskStatus, Double>> progressMap = new HashMap<>();
+        for (Map.Entry<Integer, Map<TaskStatus, Integer>> entry : rawCounts.entrySet()) {
+            Integer processId = entry.getKey();
+            Map<TaskStatus, Integer> counts = entry.getValue();
+            int total = counts.values().stream().mapToInt(Integer::intValue).sum();
+
+            if (total == 0) {
+                counts.put(TaskStatus.LOCKED, 1);
+                total = 1;
+            }
+
+            Map<TaskStatus, Double> percentages = new EnumMap<>(TaskStatus.class);
+            for (TaskStatus status : TaskStatus.values()) {
+                int count = counts.getOrDefault(status, 0);
+                double percent = 100.0 * count / total;
+                percentages.put(status, percent);
+            }
+
+            progressMap.put(processId, percentages);
+        }
+
+        // 🧩 Fill in missing process IDs with default progress
+        for (Integer processId : processIds) {
+            if (!progressMap.containsKey(processId)) {
+                Map<TaskStatus, Double> emptyProgress = new EnumMap<>(TaskStatus.class);
+                emptyProgress.put(TaskStatus.DONE, 0.0);
+                emptyProgress.put(TaskStatus.INWORK, 0.0);
+                emptyProgress.put(TaskStatus.OPEN, 0.0);
+                emptyProgress.put(TaskStatus.LOCKED, 100.0); // Treat no tasks as fully blocked
+                progressMap.put(processId, emptyProgress);
+            }
+        }
+
+        return progressMap;
+    }
+
+    public Map<Integer, String> getLastEditingUserNamesByProcessIds(List<Integer> processIds) {
+        if (processIds == null || processIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql = "SELECT t.process.id, CONCAT(t.processingUser.name, ' ', t.processingUser.surname), MAX(t.processingBegin) " +
+                "FROM Task t " +
+                "WHERE t.processingStatus IN (:statuses) " +
+                "AND t.processingUser IS NOT NULL " +
+                "AND t.processingBegin IS NOT NULL " +
+                "AND t.process.id IN (:processIds) " +
+                "GROUP BY t.process.id, t.processingUser.name, t.processingUser.surname";
+
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("processIds", processIds);
+        parameters.put("statuses", List.of(TaskStatus.DONE, TaskStatus.INWORK));
+
+        List<Object[]> result = dao.getProjectionByQuery(hql, parameters);
+
+        Map<Integer, String> userMap = new HashMap<>();
+        Map<Integer, String> maxTimestamps = new HashMap<>();
+
+        for (Object[] row : result) {
+            Integer processId = (Integer) row[0];
+            String fullName = (String) row[1];
+            String timestamp = row[2].toString(); // keep as String
+
+            String currentMax = maxTimestamps.get(processId);
+            if (currentMax == null || timestamp.compareTo(currentMax) > 0) {
+                maxTimestamps.put(processId, timestamp);
+                userMap.put(processId, fullName);
+            }
+        }
+        return userMap;
+    }
+
+    public Map<Integer, List<Task>> getVisibleTasksGroupedByProcess(List<Integer> processIds, Set<Integer> userRoleIds) {
+        if (processIds == null || processIds.isEmpty() || userRoleIds == null || userRoleIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql = "SELECT DISTINCT t FROM Task t " +
+                "JOIN t.roles r " +
+                "LEFT JOIN FETCH t.processingUser " +
+                "WHERE t.process.id IN :processIds " +
+                "AND t.processingStatus IN :statuses " +
+                "AND r.id IN :userRoleIds";
+
+        Map<String, Object> params = Map.of(
+                "processIds", processIds,
+                "statuses", List.of(TaskStatus.OPEN, TaskStatus.INWORK),
+                "userRoleIds", userRoleIds
+        );
+
+        List<Task> tasks = dao.getByQuery(hql, params);
+
+        return tasks.stream()
+                .collect(Collectors.groupingBy(task -> task.getProcess().getId()));
     }
 
     /**

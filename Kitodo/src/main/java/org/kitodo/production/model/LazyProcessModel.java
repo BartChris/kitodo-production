@@ -127,8 +127,8 @@ public class LazyProcessModel extends LazyBeanModel {
             }
             setRowCount(toIntExact(((ProcessService) searchService).countResults(filterMap, this.showClosedProcesses,
                 this.showInactiveProjects)));
-            entities = ((ProcessService) searchService).loadData(first, pageSize, sortField, sortOrder, filterMap,
-                this.showClosedProcesses, this.showInactiveProjects);
+            entities = ((ProcessService)searchService).loadDataAsDTO(first, pageSize, sortField, sortOrder, filterMap,
+                    this.showClosedProcesses, this.showInactiveProjects);
             logger.trace("{} entities loaded!", entities.size());
             return stopwatch.stop(entities);
         } catch (DAOException e) {

@@ -11,10 +11,7 @@
 
 package org.kitodo.data.database.persistence;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import javax.persistence.PersistenceException;
 
@@ -194,5 +191,20 @@ public class TaskDAO extends BaseDAO<Task> {
             // due to recursive query, which might not be supported by some databases
             throw new DAOException(e);
         }
+    }
+
+    public List<Object[]> getTaskStatusCountsByProcessIds(List<Integer> processIds) {
+        if (processIds == null || processIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String hql = "SELECT t.process.id, t.processingStatus, COUNT(t.id) " +
+                "FROM Task t " +
+                "WHERE t.process.id IN :processIds " +
+                "GROUP BY t.process.id, t.processingStatus";
+
+        Map<String, Object> parameters = Map.of("processIds", processIds);
+
+        return getProjectionByQuery(hql, parameters);
     }
 }

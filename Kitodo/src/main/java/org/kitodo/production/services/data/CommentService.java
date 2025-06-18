@@ -11,6 +11,9 @@
 
 package org.kitodo.production.services.data;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -105,5 +108,28 @@ public class CommentService extends BaseBeanService<Comment, CommentDAO> {
             process.getComments().remove(comment);
             ServiceManager.getProcessService().save(process);
         }
+    }
+
+    public Map<Integer, List<Comment>> getCommentsByProcessIds(List<Integer> processIds) {
+        if (processIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql = "SELECT c FROM Comment c " +
+                "LEFT JOIN FETCH c.author " +
+                "WHERE c.process.id IN (:processIds) " +
+                "ORDER BY c.process.id, c.creationDate ASC";
+
+        List<Comment> results = dao.getByQuery(hql, Map.of("processIds", processIds));
+
+        Map<Integer, List<Comment>> commentsByProcessId = new HashMap<>();
+        for (Comment c : results) {
+            Integer processId = c.getProcess().getId();
+            commentsByProcessId
+                    .computeIfAbsent(processId, k -> new ArrayList<>())
+                    .add(c);
+        }
+
+        return commentsByProcessId;
     }
 }

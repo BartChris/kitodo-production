@@ -18,8 +18,8 @@
     <!--@elvariable id="process" type="org.kitodo.production.dto.ProcessDTO"-->
     <h:panelGroup
             class="process-progress"
-            title="#{ProcessForm.getCurrentTaskTitles(process)}"
-            rendered="#{not empty process.tasks or process.hasChildren() and process.progressClosed ne 'NaN'}"
+            title="#{process.currentTaskTitles}"
+            rendered="#{not empty process.hasTasks or process.hasChildren and process.progressClosed ne 'NaN'}"
             style="
                 background-image: linear-gradient(
                     to right,
