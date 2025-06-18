@@ -30,7 +30,7 @@
             <h:panelGroup styleClass="action"
                           title="#{process.canCreateChildProcess? msgs.createProcessAsChild : msgs.createProcessAsChildNotConfigured}">
                 <h:link id="createChildren"
-                        outcome="#{ProcessForm.createProcessAsChild(process)}"
+                        outcome="#{ProcessForm.createProcessAsChild(process.id)}"
                         rendered="#{SecurityAccessController.hasAuthorityToAddProcess()}"
                         styleClass="#{process.canCreateChildProcess ? '' : 'ui-state-disabled'}"
                         disabled="#{not process.canCreateChildProcess}">

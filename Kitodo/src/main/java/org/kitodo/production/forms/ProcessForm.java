@@ -213,11 +213,17 @@ public class ProcessForm extends TemplateBaseForm {
 
     /**
      * Create Child for given Process.
-     * @param process the process to create a child for.
+     * @param processId the process to create a child for.
      * @return path to createProcessForm
      */
-    public String createProcessAsChild(Process process) {
+    public String createProcessAsChild(Integer processId) {
         Stopwatch stopwatch = new Stopwatch(this.getClass(), process, "createProcessAsChild");
+        Process process = null;
+        try {
+            process = ServiceManager.getProcessService().getById(processId);
+        } catch (DAOException e) {
+            throw new RuntimeException(e);
+        }
         if (Objects.nonNull(process.getTemplate()) && Objects.nonNull(process.getProject())) {
             return stopwatch.stop(CREATE_PROCESS_PATH + "&templateId=" + process.getTemplate().getId() + "&projectId="
                     + process.getProject().getId() + "&parentId=" + process.getId());

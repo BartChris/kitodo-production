@@ -469,19 +469,18 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         // Now check those few for images
         for (Process process : processdata) {
             if (toCheckWithImages.contains(process.getId())) {
-                try {
-                    canCreateChildProcessesMap.put(process.getId(), canCreateChildProcess(process));
-                    inAssignedPojectMap.put(process.getId(),
-                            ServiceManager.getUserService().getCurrentUser().getProjects().contains(process.getProject()));
-                } catch (DAOException | IOException e) {
-                    Helper.setErrorMessage(e.getMessage());
-                }
                 Folder generatorSource = process.getProject().getGeneratorSource();
                 boolean hasImages = FileService.hasImages(process, generatorSource);
                 exportableStatus.put(process.getId(), hasImages);
             }
+            try {
+                canCreateChildProcessesMap.put(process.getId(), canCreateChildProcess(process));
+                inAssignedPojectMap.put(process.getId(),
+                        ServiceManager.getUserService().getCurrentUser().getProjects().contains(process.getProject()));
+            } catch (DAOException | IOException e) {
+                Helper.setErrorMessage(e.getMessage());
+            }
         }
-        List<ProcessTableDTO> dtoList = new ArrayList<>();
         return new ProcessTableDTOConverter().mapFromEntities(sortedProcessList, canCreateChildProcessesMap,
                 inAssignedPojectMap, new ArrayList<>(), progressMap, lastEditingUserMap, exportableStatus,
                 commentsMap, processTasksMap, childrenNumberMap);
