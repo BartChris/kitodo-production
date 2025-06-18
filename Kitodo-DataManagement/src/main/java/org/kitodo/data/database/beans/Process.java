@@ -91,7 +91,7 @@ public class Process extends BaseTemplateBean {
     @JoinColumn(name = "ruleset_id", foreignKey = @ForeignKey(name = "FK_process_ruleset_id"))
     private Ruleset ruleset;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "template_id", foreignKey = @ForeignKey(name = "FK_process_template_id"))
     private Template template;
 
@@ -132,7 +132,6 @@ public class Process extends BaseTemplateBean {
                 @JoinColumn(name = "property_id", foreignKey = @ForeignKey(name = "FK_workpiece_x_property_property_id")) })
     private List<Property> workpieces;
 
-    @LazyCollection(LazyCollectionOption.FALSE)
     @ManyToMany(mappedBy = "processes")
     private List<Batch> batches = new ArrayList<>();
 
