@@ -934,13 +934,13 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
             return Collections.emptyMap();
         }
 
-        String hql = "SELECT t.process.id, CONCAT(t.processingUser.name, ' ', t.processingUser.surname), MAX(t.processingBegin) " +
+        String hql = "SELECT t.process.id, u.name, u.surname, MAX(t.processingBegin) " +
                 "FROM Task t " +
+                "JOIN t.processingUser u " +
                 "WHERE t.processingStatus IN (:statuses) " +
-                "AND t.processingUser IS NOT NULL " +
                 "AND t.processingBegin IS NOT NULL " +
                 "AND t.process.id IN (:processIds) " +
-                "GROUP BY t.process.id, t.processingUser.name, t.processingUser.surname";
+                "GROUP BY t.process.id, u.name, u.surname";
 
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("processIds", processIds);
@@ -953,15 +953,17 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
 
         for (Object[] row : result) {
             Integer processId = (Integer) row[0];
-            String fullName = (String) row[1];
-            String timestamp = row[2].toString(); // keep as String
+            String name = (String) row[1];
+            String surname = (String) row[2];
+            String timestamp = row[3].toString(); // assuming timestamp as String for comparison
 
             String currentMax = maxTimestamps.get(processId);
             if (currentMax == null || timestamp.compareTo(currentMax) > 0) {
                 maxTimestamps.put(processId, timestamp);
-                userMap.put(processId, fullName);
+                userMap.put(processId, name + " " + surname);
             }
         }
+
         return userMap;
     }
 
@@ -973,7 +975,8 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
         String hql = "SELECT DISTINCT t FROM Task t " +
                 "JOIN t.roles r " +
                 "LEFT JOIN FETCH t.processingUser " +
-                "WHERE t.process.id IN :processIds " +
+                "LEFT JOIN FETCH t.process p " +  // Avoids lazy loading of Process
+                "WHERE p.id IN :processIds " +
                 "AND t.processingStatus IN :statuses " +
                 "AND r.id IN :userRoleIds";
 
