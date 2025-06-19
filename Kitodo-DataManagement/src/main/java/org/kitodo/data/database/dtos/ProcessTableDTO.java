@@ -1,397 +1,229 @@
 /*
- * (c) Kitodo. Key to digital objects e. V. <contact@kitodo.org>
+ * (c) Kitodo. Key to digital objects e. V.  <contact@kitodo.org>
  *
- * This file is part of the Kitodo project.
- *
- * It is licensed under GNU General Public License version 3 or later.
- *
- * For the full copyright and license information, please read the
- * GPL3-License.txt file that was distributed with this source code.
+ * Licensed under GNU GPL v3 or later – see GPL3-License.txt.
  */
-
 package org.kitodo.data.database.dtos;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class ProcessTableDTO {
-    private int id;
+/**
+ * DTO used by the process list view.  All data are filled once on the server
+ * side; no further database look-ups should be required while rendering.
+ */
+public class ProcessTableDTO implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /* ------------------------------------------------------------- */
+    /* core identifiers                                               */
+    /* ------------------------------------------------------------- */
+    private int id;                 // process id (primary key)
+    private int templateId;
+    private int projectId;
+
+    /* ------------------------------------------------------------- */
+    /* descriptive data                                               */
+    /* ------------------------------------------------------------- */
     private String title;
     private String projectTitle;
     private String lastEditingUser;
     private String processingBeginLastTask;
     private String processingEndLastTask;
+
+    /* ------------------------------------------------------------- */
+    /* hierarchy / relations                                          */
+    /* ------------------------------------------------------------- */
     private boolean hasChildren;
-    private boolean hasComments;
-    private int numberOfChildren;
-    private Integer correctionCommentStatus;
-    private String progressCombined;
-    private List<String> commentMessages; // Tooltip text
-    private String lastComment;
-    private String currentTaskTitles;
-    private boolean hasTasks;
-    private List<CurrentTaskInfo> tasks;
+    private int     numberOfChildren;
     private List<ParentProcessInfo> parentProcesses;
-    private boolean canCreateChildProcess;
-    private boolean canBeExported;
-    private Double progressClosed;
-    private Double progressInProcessing;
-    private Double progressOpen;
-    private boolean canCreateProcessWithCalendar;
-    private int templateId;
-    private int projectId;
+
+    /* ------------------------------------------------------------- */
+    /* comments                                                       */
+    /* ------------------------------------------------------------- */
+    private boolean  hasComments;
+    private Integer  correctionCommentStatus;
     private List<CommentDTO> comments;
+    private String   lastComment;
 
-    public List<CommentDTO> getComments() {
-        return comments;
-    }
+    /* ------------------------------------------------------------- */
+    /* progress                                                       */
+    /* ------------------------------------------------------------- */
+    private Double  progressClosed;
+    private Double  progressInProcessing;
+    private Double  progressOpen;
+    private String  progressCombined;
+    private boolean hasTasks;
+    private String  currentTaskTitles;
+    private List<CurrentTaskInfo> tasks;
 
-    public void setComments(List<CommentDTO> comments) {
-        this.comments = comments;
-    }
+    /* ------------------------------------------------------------- */
+    /* permissions / actions                                          */
+    /* ------------------------------------------------------------- */
+    private boolean canCreateChildProcess;
+    private boolean canCreateProcessWithCalendar;
+    private boolean canBeExported;
 
-    public boolean getCanBeExported() {
-        return canBeExported;
-    }
+    /** Pre-built navigation string for the “create child process” action. */
+    private String  createChildUrl;
 
-    public void setCanBeExported(boolean canBeExported) {
-        this.canBeExported = canBeExported;
-    }
+    /* ------------------------------------------------------------- */
+    /* getters & setters                                              */
+    /* ------------------------------------------------------------- */
 
-    public int getTemplateId() {
-        return templateId;
-    }
+    public int getId()                        { return id; }
+    public void setId(int id)                 { this.id = id; }
 
-    public void setTemplateId(int templateId) {
-        this.templateId = templateId;
-    }
+    public int getTemplateId()                { return templateId; }
+    public void setTemplateId(int templateId) { this.templateId = templateId; }
 
-    public int getProjectId() {
-        return projectId;
-    }
+    public int getProjectId()                 { return projectId; }
+    public void setProjectId(int projectId)   { this.projectId = projectId; }
 
-    public boolean getHasTasks() {
-        return hasTasks;
-    }
+    public String getTitle()                  { return title; }
+    public void setTitle(String title)        { this.title = title; }
 
-    public void setHasTasks(boolean hasTasks) {
-        this.hasTasks = hasTasks;
-    }
+    public String getProjectTitle()           { return projectTitle; }
+    public void setProjectTitle(String t)     { this.projectTitle = t; }
 
-    public String getLastComment() {
-        return lastComment;
-    }
+    public String getLastEditingUser()        { return lastEditingUser; }
+    public void setLastEditingUser(String u)  { this.lastEditingUser = u; }
 
-    public void setLastComment(String lastComment) {
-        this.lastComment = lastComment;
-    }
+    public String getProcessingBeginLastTask(){ return processingBeginLastTask; }
+    public void setProcessingBeginLastTask(String d){ this.processingBeginLastTask = d; }
 
-    public void setProjectId(int templateId) {
-        this.projectId = templateId;
-    }
+    public String getProcessingEndLastTask()  { return processingEndLastTask; }
+    public void setProcessingEndLastTask(String d){ this.processingEndLastTask = d; }
 
-    public Double getProgressInProcessing() {
-        return progressInProcessing;
-    }
+    public boolean isHasChildren()            { return hasChildren; }
+    public void setHasChildren(boolean b)     { this.hasChildren = b; }
 
-    public boolean getCanCreateChildProcess() {
-        return canCreateChildProcess;
-    }
+    public int getNumberOfChildren()          { return numberOfChildren; }
+    public void setNumberOfChildren(int n)    { this.numberOfChildren = n; }
 
-    public void setCanCreateChildProcess(boolean canCreateChildProcess) {
-        this.canCreateChildProcess = canCreateChildProcess;
-    }
+    public List<ParentProcessInfo> getParentProcesses()                 { return parentProcesses; }
+    public void setParentProcesses(List<ParentProcessInfo> parents)     { this.parentProcesses = parents; }
 
-    public void setCanCreateProcessWithCalendar(boolean canCreateProcessWithCalendar) {
-        this.canCreateProcessWithCalendar = canCreateProcessWithCalendar;
-    }
+    public boolean isHasComments()            { return hasComments; }
+    public void setHasComments(boolean b)     { this.hasComments = b; }
 
-    public boolean getCanCreateProcessWithCalendar() {
-        return canCreateProcessWithCalendar;
-    }
+    public Integer getCorrectionCommentStatus(){ return correctionCommentStatus; }
+    public void setCorrectionCommentStatus(Integer s){ this.correctionCommentStatus = s; }
 
+    public List<CommentDTO> getComments()     { return comments; }
+    public void setComments(List<CommentDTO> c){ this.comments = c; }
 
-    public void setProgressInProcessing(Double progressInProcessing) {
-        this.progressInProcessing = progressInProcessing;
-    }
+    public String getLastComment()            { return lastComment; }
+    public void setLastComment(String c)      { this.lastComment = c; }
 
-    public Double getProgressOpen() {
-        return progressOpen;
-    }
+    public Double getProgressClosed()         { return progressClosed; }
+    public void setProgressClosed(Double d)   { this.progressClosed = d; }
 
-    public String getCurrentTaskTitles() {
-        return currentTaskTitles;
-    }
+    public Double getProgressInProcessing()   { return progressInProcessing; }
+    public void setProgressInProcessing(Double d){ this.progressInProcessing = d; }
 
-    public void setCurrentTaskTitles(String currentTaskTitles) {
-        this.currentTaskTitles = currentTaskTitles;
-    }
+    public Double getProgressOpen()           { return progressOpen; }
+    public void setProgressOpen(Double d)     { this.progressOpen = d; }
 
+    public String getProgressCombined()       { return progressCombined; }
+    public void setProgressCombined(String s) { this.progressCombined = s; }
 
-    public void setProgressOpen(Double progressOpen) {
-        this.progressOpen = progressOpen;
-    }
+    public boolean isHasTasks()               { return hasTasks; }
+    public void setHasTasks(boolean b)        { this.hasTasks = b; }
 
-    public Double getProgressClosed() {
-        return progressClosed;
-    }
+    public String getCurrentTaskTitles()      { return currentTaskTitles; }
+    public void setCurrentTaskTitles(String s){ this.currentTaskTitles = s; }
 
-    public void setProgressClosed(Double progressClosed) {
-        this.progressClosed = progressClosed;
-    }
+    public List<CurrentTaskInfo> getTasks()   { return tasks; }
+    public void setTasks(List<CurrentTaskInfo> t){ this.tasks = t; }
 
-    public int getId() {
-        return id;
-    }
+    public boolean isCanCreateChildProcess()  { return canCreateChildProcess; }
+    public void setCanCreateChildProcess(boolean b){ this.canCreateChildProcess = b; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public boolean isCanCreateProcessWithCalendar(){ return canCreateProcessWithCalendar; }
+    public void setCanCreateProcessWithCalendar(boolean b){ this.canCreateProcessWithCalendar = b; }
 
-    public String getTitle() {
-        return title;
-    }
+    public boolean isCanBeExported()          { return canBeExported; }
+    public void setCanBeExported(boolean b)   { this.canBeExported = b; }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
+    public String getCreateChildUrl()         { return createChildUrl; }
+    public void setCreateChildUrl(String url) { this.createChildUrl = url; }
 
-    public String getProjectTitle() {
-        return projectTitle;
-    }
-
-    public void setProjectTitle(String projectTitle) {
-        this.projectTitle = projectTitle;
-    }
-
-    public String getLastEditingUser() {
-        return lastEditingUser;
-    }
-
-    public void setLastEditingUser(String lastEditingUser) {
-        this.lastEditingUser = lastEditingUser;
-    }
-
-    public boolean getHasChildren() {
-        return hasChildren;
-    }
-
-    public void setHasChildren(boolean hasChildren) {
-        this.hasChildren = hasChildren;
-    }
-
-    public int getNumberOfChildren(){
-        return numberOfChildren;
-    }
-
-    public void setNumberOfChildren(int numberOfChildren){
-        this.numberOfChildren = numberOfChildren;
-    }
-
-    public boolean getHasComments() {
-        return hasComments;
-    }
-
-    public void setHasComments(boolean hasComments) {
-        this.hasComments = hasComments;
-    }
-
-    public int getParentID(){
-        return 0;
-    }
-
-    public Integer getCorrectionCommentStatus() {
-        return correctionCommentStatus;
-    }
-
-    public void setCorrectionCommentStatus(Integer correctionCommentStatus) {
-        this.correctionCommentStatus = correctionCommentStatus;
-    }
-
-    public List<String> getCommentMessages() {
-        return commentMessages;
-    }
-
-    public List<ParentProcessInfo> getParentProcesses() {
-        return parentProcesses;
-    }
-
-    public void setParentProcesses(List<ParentProcessInfo> parentProcessInfos) {
-        this.parentProcesses = parentProcessInfos;
-    }
-
-    public List<CurrentTaskInfo> getTasks() {
-        return tasks;
-    }
-
-    public void setTasks(List<CurrentTaskInfo> currentTasks) {
-        this.tasks = currentTasks;
-    }
-
-    public void setCommentMessages(List<String> commentMessages) {
-        this.commentMessages = commentMessages;
-    }
-
-    public String getProgressCombined() {
-        return progressCombined;
-    }
-
-    public void setProgressCombined(String progressCombined) {
-        this.progressCombined = progressCombined;
-    }
+    /* ------------------------------------------------------------- */
+    /* nested helper classes                                          */
+    /* ------------------------------------------------------------- */
 
     public static class ParentProcessInfo {
-        private int id;
-        private String title;
+        private int     id;
+        private String  title;
         private boolean inAssignedProject;
         private boolean locked;
 
-        public int getId() {
-            return id;
-        }
+        public int getId()               { return id; }
+        public void setId(int id)        { this.id = id; }
 
-        public void setId(int id) {
-            this.id = id;
-        }
+        public String getTitle()         { return title; }
+        public void setTitle(String t)   { this.title = t; }
 
-        public String getTitle() {
-            return title;
-        }
+        public boolean isInAssignedProject()   { return inAssignedProject; }
+        public void setInAssignedProject(boolean b){ this.inAssignedProject = b; }
 
-        public void setTitle(String title) {
-            this.title = title;
-        }
-
-        public boolean getInAssignedProject() {
-            return inAssignedProject;
-        }
-
-        public void setInAssignedProject(boolean inAssignedProject) {
-            this.inAssignedProject = inAssignedProject;
-        }
-
-        public boolean getLocked() {
-            return locked;
-        }
-
-        public void setLocked(boolean locked) {
-            this.locked = locked;
-        }
+        public boolean isLocked()        { return locked; }
+        public void setLocked(boolean b) { this.locked = b; }
     }
 
-
-
-
     public static class CurrentTaskInfo {
-        private int id;
-        private String title;
-        private String status;
+        private int     id;
+        private String  title;
+        private String  status;
         private boolean batchStep;
         private boolean batchAvailable;
-        private int processingUserId;
-        private String processingUserFullName;
+        private Integer processingUserId;
+        private String  processingUserFullName;
 
-        public int getId() {
-            return id;
-        }
+        public int getId()               { return id; }
+        public void setId(int id)        { this.id = id; }
 
-        public void setId(int id) {
-            this.id = id;
-        }
+        public String getTitle()         { return title; }
+        public void setTitle(String t)   { this.title = t; }
 
-        public String getTitle() {
-            return title;
-        }
+        public String getStatus()        { return status; }
+        public void setStatus(String s)  { this.status = s; }
 
-        public void setTitle(String title) {
-            this.title = title;
-        }
+        public boolean isBatchStep()     { return batchStep; }
+        public void setBatchStep(boolean b){ this.batchStep = b; }
 
-        public String getStatus() {
-            return status;
-        }
+        public boolean isBatchAvailable(){ return batchAvailable; }
+        public void setBatchAvailable(boolean b){ this.batchAvailable = b; }
 
-        public void setStatus(String status) {
-            this.status = status;
-        }
+        public Integer getProcessingUserId()          { return processingUserId; }
+        public void     setProcessingUserId(Integer i){ this.processingUserId = i; }
 
-        public boolean isBatchStep() {
-            return batchStep;
-        }
-
-        public void setBatchStep(boolean batchStep) {
-            this.batchStep = batchStep;
-        }
-
-        public boolean isBatchAvailable() {
-            return batchAvailable;
-        }
-
-        public void setBatchAvailable(boolean batchAvailable) {
-            this.batchAvailable = batchAvailable;
-        }
-
-        public int getProcessingUserId() {
-            return processingUserId;
-        }
-
-        public void setProcessingUserId(int processingUserId) {
-            this.processingUserId = processingUserId;
-        }
-
-        public String getProcessingUserFullName() {
-            return processingUserFullName;
-        }
-
-        public void setProcessingUserFullName(String processingUserFullName) {
-            this.processingUserFullName = processingUserFullName;
-        }
+        public String getProcessingUserFullName()     { return processingUserFullName; }
+        public void setProcessingUserFullName(String s){ this.processingUserFullName = s; }
     }
 
     public static class CommentDTO {
-        private String message;
-        private String authorFullName;
-        private String creationDate; // Could use LocalDateTime or Date too
+        private String  message;
+        private String  authorFullName;
+        private String  creationDate;   // rendered already formatted
         private boolean corrected;
-        private String type; // e.g., "ERROR", "INFO"
+        private String  type;           // "ERROR", "INFO", …
 
-        public String getMessage() {
-            return message;
-        }
+        public String getMessage()      { return message; }
+        public void setMessage(String m){ this.message = m; }
 
-        public void setMessage(String message) {
-            this.message = message;
-        }
+        public String getAuthorFullName(){ return authorFullName; }
+        public void setAuthorFullName(String s){ this.authorFullName = s; }
 
-        public String getAuthorFullName() {
-            return authorFullName;
-        }
+        public String getCreationDate() { return creationDate; }
+        public void setCreationDate(String d){ this.creationDate = d; }
 
-        public void setAuthorFullName(String authorFullName) {
-            this.authorFullName = authorFullName;
-        }
+        public boolean isCorrected()    { return corrected; }
+        public void setCorrected(boolean b){ this.corrected = b; }
 
-        public String getCreationDate() {
-            return creationDate;
-        }
-
-        public void setCreationDate(String creationDate) {
-            this.creationDate = creationDate;
-        }
-
-        public boolean isCorrected() {
-            return corrected;
-        }
-
-        public void setCorrected(boolean corrected) {
-            this.corrected = corrected;
-        }
-
-        public String getType() {
-            return type;
-        }
-
-        public void setType(String type) {
-            this.type = type;
-        }
+        public String getType()         { return type; }
+        public void setType(String t)   { this.type = t; }
     }
 }

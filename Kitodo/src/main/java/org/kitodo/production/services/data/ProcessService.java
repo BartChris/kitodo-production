@@ -109,6 +109,7 @@ import org.kitodo.data.database.beans.Task;
 import org.kitodo.data.database.beans.User;
 import org.kitodo.data.database.converter.ProcessTableDTOConverter;
 import org.kitodo.data.database.dtos.ProcessTableDTO;
+import org.kitodo.data.database.dtos.TaskRowDTO;
 import org.kitodo.data.database.enums.CommentType;
 import org.kitodo.data.database.enums.CorrectionComments;
 import org.kitodo.data.database.enums.TaskStatus;
@@ -457,7 +458,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         Set<Integer> userRoles = ServiceManager.getUserService().getCurrentUser().getRoles().stream()
                 .map(Role::getId)
                 .collect(Collectors.toSet());
-        Map<Integer, List<Task>> processTasksMap = ServiceManager.getTaskService().getVisibleTasksGroupedByProcess(actualProcessIds, userRoles);
+        Map<Integer, List<TaskRowDTO>> processTasksMap = ServiceManager.getTaskService().getVisibleTasksGroupedByProcess(actualProcessIds, userRoles);
         Map<Integer, Integer> childrenNumberMap = getNumberOfChildrenMap(actualProcessIds);
         Map<Integer, Boolean> exportableStatus = getExportableStatus(actualProcessIds, childrenNumberMap);
         Set<Integer> toCheckWithImages = exportableStatus.entrySet().stream()
@@ -465,8 +466,8 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
         Map<Integer, Boolean> canCreateChildProcessesMap = new HashMap<>();
-        Map<Integer, Boolean> inAssignedPojectMap = new HashMap<>();
-        // Now check those few for images
+        Map<Integer, Boolean> inAssignedProjectMap = new HashMap<>();
+        Map<Integer, List<Process>> parentMap = new HashMap<>();
         for (Process process : processdata) {
             if (toCheckWithImages.contains(process.getId())) {
                 Folder generatorSource = process.getProject().getGeneratorSource();
@@ -475,14 +476,15 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             }
             try {
                 canCreateChildProcessesMap.put(process.getId(), canCreateChildProcess(process));
-                inAssignedPojectMap.put(process.getId(),
+                inAssignedProjectMap.put(process.getId(),
                         ServiceManager.getUserService().getCurrentUser().getProjects().contains(process.getProject()));
+                parentMap.put(process.getId(), findParentProcesses(process)); // <-- list may be empty
             } catch (DAOException | IOException e) {
                 Helper.setErrorMessage(e.getMessage());
             }
         }
         return new ProcessTableDTOConverter().mapFromEntities(sortedProcessList, canCreateChildProcessesMap,
-                inAssignedPojectMap, new ArrayList<>(), progressMap, lastEditingUserMap, exportableStatus,
+                inAssignedProjectMap, parentMap, progressMap, lastEditingUserMap, exportableStatus,
                 commentsMap, processTasksMap, childrenNumberMap);
     }
 

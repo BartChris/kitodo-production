@@ -31,6 +31,7 @@ import org.kitodo.data.database.beans.Role;
 import org.kitodo.data.database.beans.Task;
 import org.kitodo.data.database.beans.Template;
 import org.kitodo.data.database.beans.User;
+import org.kitodo.data.database.dtos.TaskRowDTO;
 import org.kitodo.data.database.enums.TaskEditType;
 import org.kitodo.data.database.enums.TaskStatus;
 import org.kitodo.data.database.exceptions.DAOException;
@@ -967,29 +968,52 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
         return userMap;
     }
 
-    public Map<Integer, List<Task>> getVisibleTasksGroupedByProcess(List<Integer> processIds, Set<Integer> userRoleIds) {
-        if (processIds == null || processIds.isEmpty() || userRoleIds == null || userRoleIds.isEmpty()) {
+    public Map<Integer, List<TaskRowDTO>> getVisibleTasksGroupedByProcess(
+            List<Integer> processIds, Set<Integer> userRoleIds) {
+
+        if (processIds == null || processIds.isEmpty()
+                || userRoleIds == null || userRoleIds.isEmpty()) {
             return Collections.emptyMap();
         }
 
-        String hql = "SELECT DISTINCT t FROM Task t " +
-                "JOIN t.roles r " +
-                "LEFT JOIN FETCH t.processingUser " +
-                "LEFT JOIN FETCH t.process p " +  // Avoids lazy loading of Process
-                "WHERE p.id IN :processIds " +
-                "AND t.processingStatus IN :statuses " +
-                "AND r.id IN :userRoleIds";
+        /*
+         *  We no longer ask Hibernate for full Task entities.
+         *  Instead we let the DB assemble only the six scalar columns
+         *  we really need and hydrate them straight into TaskRowDTO.
+         */
+        String hql =
+                "SELECT new org.kitodo.data.database.dtos.TaskRowDTO(" +
+                        "         t.id, " +
+                        "         p.id, " +
+                        "         u.id, " +
+                        "         CONCAT(u.name,' ',u.surname), " +
+                        "         t.title, " +
+                        "         t.processingStatus) " +
+                        "FROM   Task t " +
+                        "JOIN   t.roles r " +
+                        "JOIN   t.process p " +
+                        "LEFT   JOIN t.processingUser u " +
+                        "WHERE  p.id              IN :processIds " +
+                        "AND    t.processingStatus IN :statuses " +
+                        "AND    r.id              IN :userRoleIds";
 
-        Map<String, Object> params = Map.of(
-                "processIds", processIds,
-                "statuses", List.of(TaskStatus.OPEN, TaskStatus.INWORK),
+
+
+        Map<String,Object> params = Map.of(
+                "processIds",  processIds,
+                "statuses",    List.of(TaskStatus.OPEN, TaskStatus.INWORK),
                 "userRoleIds", userRoleIds
         );
 
-        List<Task> tasks = dao.getByQuery(hql, params);
+        /*  dao.getByQuery() already knows how to instantiate the DTO
+         *  because the HQL uses “new Fqn( … )”.
+         */
+        List<TaskRowDTO> rows = dao.getByQuery(hql, params, TaskRowDTO.class);
 
-        return tasks.stream()
-                .collect(Collectors.groupingBy(task -> task.getProcess().getId()));
+        /*  Group by processId so the caller gets exactly the same
+         *  structure as before – just with DTOs instead of entities.   */
+        return rows.stream()
+                .collect(Collectors.groupingBy(TaskRowDTO::getProcessId));
     }
 
     /**

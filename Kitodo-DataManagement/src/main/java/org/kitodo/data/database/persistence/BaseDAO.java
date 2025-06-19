@@ -230,6 +230,18 @@ public abstract class BaseDAO<T extends BaseBean> implements Serializable {
         }
     }
 
+    public <R> List<R> getByQuery(String hql,
+                                  Map<String, Object> parameters,
+                                  Class<R> resultClass) {
+        try (Session session = HibernateUtil.getSession()) {
+            debugLogQuery(hql, parameters);
+
+            Query<R> q = session.createQuery(hql, resultClass);
+            addParameters(q, parameters);
+
+            return q.list();               // Hibernate 5.x   (or q.getResultList() for JPA)
+        }
+    }
     /**
      * Retrieves BaseBean objects from database by given query.
      *

@@ -11,6 +11,7 @@ import org.kitodo.data.database.beans.Comment;
 import org.kitodo.data.database.beans.Task;
 import org.kitodo.data.database.beans.Process;
 import org.kitodo.data.database.dtos.ProcessTableDTO;
+import org.kitodo.data.database.dtos.TaskRowDTO;
 import org.kitodo.data.database.enums.TaskStatus;
 
 public class ProcessTableDTOConverter {
@@ -18,10 +19,10 @@ public class ProcessTableDTOConverter {
     private static final Map<Integer, Collection<String>> RULESET_CACHE_FOR_CREATE_CHILD_FROM_PARENT = new HashMap<>();
 
     public ProcessTableDTO mapFromEntity(Process process, Map<Integer, Boolean> canCreateChildProcessesMap,
-                                         Map<Integer, Boolean> inAssignedPojectMap,
-                                         List<Process> parentProcesses, Map<Integer, Map<TaskStatus, Double>> progressMap,
+                                         Map<Integer, Boolean> inAssignedProjectMap,
+                                         Map<Integer, List<Process>> parentProcessMap, Map<Integer, Map<TaskStatus, Double>> progressMap,
                                          Map<Integer, String> lastEditingUserMap, Map<Integer, Boolean> exportableStatus,
-                                         Map<Integer, List<Comment>> commentsMap, Map<Integer, List<Task>> processTasksMap,
+                                         Map<Integer, List<Comment>> commentsMap, Map<Integer, List<TaskRowDTO>> processTasksMap,
                                          Map<Integer, Integer> childrenNumberMap) {
 
         ProcessTableDTO dto = new ProcessTableDTO();
@@ -30,9 +31,15 @@ public class ProcessTableDTOConverter {
         dto.setLastEditingUser(
                 lastEditingUserMap.getOrDefault(process.getId(), null)
         );
+
         dto.setHasChildren(childrenNumberMap.getOrDefault(process.getId(), 0) > 0);
         dto.setNumberOfChildren(childrenNumberMap.getOrDefault(process.getId(), 0));
-        dto.setHasTasks(!process.getTasks().isEmpty());
+        dto.setCreateChildUrl(
+                "processCreate.xhtml?templateId=" + dto.getTemplateId()
+                        + "&projectId="  + dto.getProjectId()
+                        + "&parentId="   + dto.getId());
+        //dto.setHasTasks(!process.getTasks().isEmpty());
+        dto.setHasTasks(true);
         dto.setTemplateId(process.getTemplate().getId());
         dto.setProjectId(process.getProject().getId());
         dto.setCanBeExported(exportableStatus.getOrDefault(process.getId(), false));
@@ -85,27 +92,32 @@ public class ProcessTableDTOConverter {
         );
         dto.setCurrentTaskTitles(createProgressTooltip(process));
         List<ProcessTableDTO.CurrentTaskInfo> taskInfoList = new ArrayList<>();
-        List<Task> tasks = processTasksMap.getOrDefault(process.getId(), Collections.emptyList());
+        List<TaskRowDTO> tasks = processTasksMap.getOrDefault(process.getId(), Collections.emptyList());
 
-        for (Task task : tasks) {
+        for (TaskRowDTO task : tasks) {
             ProcessTableDTO.CurrentTaskInfo info = new ProcessTableDTO.CurrentTaskInfo();
-            info.setId(task.getId());
-            info.setTitle(task.getTitle());
-            info.setStatus(task.getProcessingStatus().getTitle());
-            info.setBatchStep(task.isBatchStep());
-            if (task.getProcessingUser() != null) {
-                info.setProcessingUserId(task.getProcessingUser().getId());
-                info.setProcessingUserFullName(task.getProcessingUser().getFullName());
+            info.setId(task.getTaskId());
+            info.setTitle(task.getTaskTitle());
+            info.setStatus(task.getTaskStatus().getTitle());
+            //info.setBatchStep(task.getBatchStep());
+            if (task.getUserId() != null) {
+                info.setProcessingUserId(task.getUserId());
+                info.setProcessingUserFullName(task.getUserFullName());
             }
             taskInfoList.add(info);
         }
+        // grab the parent list safely (may be empty)
         List<ProcessTableDTO.ParentProcessInfo> parentProcessInfos = new ArrayList<>();
-        List<Process> parents = parentProcesses;
+        List<Process> parents =
+                parentProcessMap.getOrDefault(process.getId(), Collections.emptyList());
+
         for (Process parent : parents) {
             ProcessTableDTO.ParentProcessInfo info = new ProcessTableDTO.ParentProcessInfo();
             info.setId(parent.getId());
             info.setTitle(parent.getTitle());
-            info.setInAssignedProject(inAssignedPojectMap.get(process.getId()));
+            info.setInAssignedProject(
+                    inAssignedProjectMap.getOrDefault(parent.getId(), false));
+
             parentProcessInfos.add(info);
         }
         dto.setParentProcesses(parentProcessInfos);
@@ -115,9 +127,9 @@ public class ProcessTableDTOConverter {
 
     public List<ProcessTableDTO> mapFromEntities(List<Process> processes, Map<Integer, Boolean> canCreateChildProcessesMap,
                                                  Map<Integer, Boolean> setInAssignedProject,
-                                                 List<Process> parentProcesses, Map<Integer, Map<TaskStatus, Double>> progressMap,
+                                                 Map<Integer, List<Process>> parentProcesses, Map<Integer, Map<TaskStatus, Double>> progressMap,
                                                  Map<Integer, String> lastEditingUserMap, Map<Integer, Boolean> exportableStatus,
-                                                 Map<Integer, List<Comment>> commentsMap, Map<Integer, List<Task>> processTasksMap,
+                                                 Map<Integer, List<Comment>> commentsMap, Map<Integer, List<TaskRowDTO>> processTasksMap,
                                                  Map<Integer, Integer> childrenNumberMap) {
         List<ProcessTableDTO> result = new ArrayList<>(processes.size());
         for (Process process : processes) {

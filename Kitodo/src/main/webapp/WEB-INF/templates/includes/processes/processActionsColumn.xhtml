@@ -25,16 +25,15 @@
               headerText="#{msgs.actions}">
         <h:panelGroup layout="block"
                       styleClass="actionsBlock">
-            <!--@elvariable id="process" type="org.kitodo.production.dto.ProcessDTO"-->
+            <!--@elvariable id="process" type="org.kitodo.data.database.dtos.ProcessTableDTO"-->
 
             <h:panelGroup styleClass="action"
                           title="#{process.canCreateChildProcess? msgs.createProcessAsChild : msgs.createProcessAsChildNotConfigured}">
-                <h:link id="createChildren"
-                        outcome="#{ProcessForm.createProcessAsChild(process.id)}"
+                <h:link outcome="#{process.createChildUrl}"
                         rendered="#{SecurityAccessController.hasAuthorityToAddProcess()}"
                         styleClass="#{process.canCreateChildProcess ? '' : 'ui-state-disabled'}"
                         disabled="#{not process.canCreateChildProcess}">
-                    <h:outputText><i class="fa fa-plus-circle fa-lg"/></h:outputText>
+                    <i class="fa fa-plus-circle fa-lg"/>
                 </h:link>
             </h:panelGroup>
 
