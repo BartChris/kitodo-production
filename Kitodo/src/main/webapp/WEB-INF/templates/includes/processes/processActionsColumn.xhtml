@@ -140,8 +140,6 @@
                                action="#{ProcessListView.delete(process)}"
                                title="#{msgs.delete}"
                                rendered="#{SecurityAccessController.hasAuthorityToDeleteProcess()}"
-                               process="@this"
-                               update="processesTable">
                                disabled="#{process.hasChildren}"
                                process="@this"
                                update="processesTable">

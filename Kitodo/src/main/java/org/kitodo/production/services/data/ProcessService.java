@@ -108,6 +108,7 @@ import org.kitodo.data.database.beans.Ruleset;
 import org.kitodo.data.database.beans.Task;
 import org.kitodo.data.database.beans.User;
 import org.kitodo.data.database.converter.ProcessTableDTOConverter;
+import org.kitodo.data.database.dtos.ProcessBaseRowDTO;
 import org.kitodo.data.database.dtos.ProcessTableDTO;
 import org.kitodo.data.database.dtos.TaskRowDTO;
 import org.kitodo.data.database.enums.CommentType;
@@ -441,18 +442,22 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
     public List<ProcessTableDTO> loadDataAsDTO(int offset, int limit, String sortField, SortOrder sortOrder, Map<?, String> filters,
                                                boolean showClosedProcesses, boolean showInactiveProjects) throws DAOException {
         List<Integer> results = loadDataInt(offset, limit, sortField, sortOrder, filters, showClosedProcesses, showInactiveProjects);
-        List<Process> processdata = fetchFullProcesses(results);
-        Map<Integer, Process> processById = processdata.stream()
+        List<ProcessBaseRowDTO> processdata = fetchProcessBaseRows(results);
+        List<Process> fullProcesses = fetchFullProcesses(results);
+        Map<Integer, Process> processMap = fullProcesses.stream()
                 .collect(Collectors.toMap(Process::getId, Function.identity()));
-        List<Process> sortedProcessList = results.stream()
+        Map<Integer, ProcessBaseRowDTO> processById = processdata.stream()
+                .collect(Collectors.toMap(ProcessBaseRowDTO::getProcessId, Function.identity()));
+        List<ProcessBaseRowDTO> sortedProcessList = results.stream()
                 .map(processById::get)
                 .filter(Objects::nonNull) // optional: handles missing ones safely
                 .collect(Collectors.toList());
         List<Integer> actualProcessIds = sortedProcessList.stream()
-                .map(Process::getId)
+                .map(ProcessBaseRowDTO::getProcessId)
                 .collect(Collectors.toList());
         Map<Integer, Map<TaskStatus, Double>> progressMap =
                 ServiceManager.getTaskService().getProgressPercentagesForProcesses(actualProcessIds);
+        Map<Integer, Folder> processFolderMapping = fetchGeneratorSourcesByProcessIds(actualProcessIds);
         Map<Integer, String> lastEditingUserMap = ServiceManager.getTaskService().getLastEditingUserNamesByProcessIds(actualProcessIds);
         Map<Integer, List<Comment>> commentsMap = ServiceManager.getCommentService().getCommentsByProcessIds(actualProcessIds);
         Set<Integer> userRoles = ServiceManager.getUserService().getCurrentUser().getRoles().stream()
@@ -468,22 +473,28 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         Map<Integer, Boolean> canCreateChildProcessesMap = new HashMap<>();
         Map<Integer, Boolean> inAssignedProjectMap = new HashMap<>();
         Map<Integer, List<Process>> parentMap = new HashMap<>();
-        for (Process process : processdata) {
-            if (toCheckWithImages.contains(process.getId())) {
-                Folder generatorSource = process.getProject().getGeneratorSource();
-                boolean hasImages = FileService.hasImages(process, generatorSource);
-                exportableStatus.put(process.getId(), hasImages);
+        Set<Integer> assignedProjectIds = ServiceManager.getUserService().getCurrentUser().getProjects()
+                .stream()
+                .map(Project::getId)
+                .collect(Collectors.toSet());
+        for (ProcessBaseRowDTO base : processdata) {
+            int pid = base.getProcessId();
+            Process full = processMap.get(pid);
+            boolean hasImages = true;
+            if (Objects.nonNull(processFolderMapping.get(pid))){
+                hasImages = FileService.hasImages(full, processFolderMapping.get(pid));
             }
+            exportableStatus.put(pid, hasImages);
             try {
-                canCreateChildProcessesMap.put(process.getId(), canCreateChildProcess(process));
-                inAssignedProjectMap.put(process.getId(),
-                        ServiceManager.getUserService().getCurrentUser().getProjects().contains(process.getProject()));
-                parentMap.put(process.getId(), findParentProcesses(process)); // <-- list may be empty
+                canCreateChildProcessesMap.put(pid, canCreateChildProcess(full));
+                inAssignedProjectMap.put(pid,
+                        assignedProjectIds.contains(base.getProjectId()));
+                parentMap.put(pid, findParentProcesses(full));
             } catch (DAOException | IOException e) {
                 Helper.setErrorMessage(e.getMessage());
             }
         }
-        return new ProcessTableDTOConverter().mapFromEntities(sortedProcessList, canCreateChildProcessesMap,
+        return new ProcessTableDTOConverter().mapFromEntities(processdata, canCreateChildProcessesMap,
                 inAssignedProjectMap, parentMap, progressMap, lastEditingUserMap, exportableStatus,
                 commentsMap, processTasksMap, childrenNumberMap);
     }
@@ -518,25 +529,48 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         return getIdsByQuery(idQuery, query.getQueryParameters(), offset, limit);
     }
 
+    public List<ProcessBaseRowDTO> fetchProcessBaseRows(List<Integer> ids) {
+        if (ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String hql = "SELECT new org.kitodo.data.database.dtos.ProcessBaseRowDTO(" +
+                "p.id, p.title, p.template.id, p.project.id, p.project.title) " +
+                "FROM Process p WHERE p.id IN (:ids)";
+
+        return dao.getByQuery(hql, Map.of("ids", ids), ProcessBaseRowDTO.class);
+    }
+
+    public Map<Integer, Folder> fetchGeneratorSourcesByProcessIds(List<Integer> processIds) {
+        if (processIds == null || processIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String hql = "SELECT p.id, proj.generatorSource " +
+                "FROM Process p " +
+                "JOIN p.project proj " +
+                "WHERE p.id IN (:ids)";
+
+        List<Object[]> results = dao.getProjectionByQuery(hql, Map.of("ids", processIds));
+
+        return results.stream()
+                .filter(row -> row[0] != null && row[1] != null)
+                .collect(Collectors.toMap(
+                        row -> (Integer) row[0],
+                        row -> (Folder) row[1]
+                ));
+    }
+
     public List<Process> fetchFullProcesses(List<Integer> ids) {
         if (ids.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // Load everything in one query
         String hql = "SELECT DISTINCT p FROM Process p " +
-                "LEFT JOIN FETCH p.project proj " +
-                "LEFT JOIN FETCH proj.generatorSource " +
-                "LEFT JOIN FETCH p.template " +
                 "LEFT JOIN FETCH p.ruleset " +
-                "LEFT JOIN FETCH p.tasks t " +
-                "LEFT JOIN FETCH t.processingUser " +  // this one is used
+                "LEFT JOIN FETCH p.parent " +
                 "WHERE p.id IN (:ids)";
-
-
-        List<Process> processes = dao.getByQuery(hql, Map.of("ids", ids), 0, ids.size());
-
-        return processes;
+        return dao.getByQuery(hql, Map.of("ids", ids), 0, ids.size());
     }
 
     /**
