@@ -22,12 +22,21 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.stream.StreamSource;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kitodo.api.dataformat.Workpiece;
@@ -40,7 +49,11 @@ import org.kitodo.production.helper.metadata.legacytypeimplementations.LegacyMet
 import org.kitodo.production.helper.metadata.legacytypeimplementations.LegacyPrefsHelper;
 import org.kitodo.production.helper.tasks.EmptyTask;
 import org.kitodo.production.services.ServiceManager;
+import org.kitodo.production.services.data.ProcessService;
 import org.kitodo.production.services.file.FileService;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.xml.sax.SAXException;
 
 public class ExportMets {
     private final FileService fileService = ServiceManager.getFileService();
@@ -163,7 +176,11 @@ public class ExportMets {
                         String message = Helper.getTranslation("xsltFileNotFound", xslFile.toString());
                         throw new FileNotFoundException(message);
                     }
-                    bufferedOutputStream.write(XsltHelper.transformXmlByXslt(source, xslFile).toByteArray());
+                    byte[] transformedBytes = XsltHelper.transformXmlByXslt(source, xslFile).toByteArray();
+                    bufferedOutputStream.write(transformedBytes);
+                    if (!ProcessService.canCreateChildProcess(process)) {
+                        updateInternalLabelsIfNeeded(ServiceManager.getFileService().getMetadataFilePath(process), transformedBytes);
+                    }
                 } catch (FileNotFoundException | TransformerException e) {
                     if (Objects.nonNull(exportDmsTask)) {
                         exportDmsTask.setException(e);
@@ -177,4 +194,58 @@ public class ExportMets {
         Helper.setMessage(process.getTitle() + ": ", "exportFinished");
         return true;
     }
+
+    /**
+     * Extract LABEL/ORDERLABEL from export and update the internal meta.xml
+     * only if values actually changed.
+     */
+    private void updateInternalLabelsIfNeeded(URI metaFile, byte[] xmlBytes) {
+        Map<String, String> labels = extractLabels(xmlBytes);
+        String label = labels.get("LABEL");
+        String orderLabel = labels.get("ORDERLABEL");
+        try {
+            Workpiece freshWorkpiece = ServiceManager.getMetsService().loadWorkpiece(metaFile);
+            boolean labelChanged = !Objects.equals(freshWorkpiece.getLogicalStructure().getLabel(), label);
+            boolean orderLabelChanged = !Objects.equals(freshWorkpiece.getLogicalStructure().getOrderlabel(), orderLabel);
+
+            if ((StringUtils.isNotBlank(label) || StringUtils.isNotBlank(orderLabel))
+                    && (labelChanged || orderLabelChanged)) {
+
+                freshWorkpiece.getLogicalStructure().setLabel(label);
+                freshWorkpiece.getLogicalStructure().setOrderlabel(orderLabel);
+                ServiceManager.getMetsService().saveWorkpiece(freshWorkpiece, metaFile);
+            }
+        } catch (IOException e) {
+            Helper.setErrorMessage("Updating LABEL/ORDERLABEL in METS file failed!", e.getLocalizedMessage(), logger, e);
+        }
+    }
+
+
+    private Map<String, String> extractLabels(byte[] xmlBytes) {
+        Map<String, String> labels = new HashMap<>();
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            Document doc = factory.newDocumentBuilder().parse(new ByteArrayInputStream(xmlBytes));
+            XPath xpath = XPathFactory.newInstance().newXPath();
+
+            // Select the first <div> inside structMap[@TYPE='LOGICAL'] that has a DMDID attribute.
+            // This ensures we skip wrapper nodes for parents
+            String xpathExpr = "/*[local-name()='mets']"
+                    + "/*[local-name()='structMap' and @TYPE='LOGICAL']"
+                    + "//*[local-name()='div' and @DMDID][1]";
+
+            Element logicalDiv = (Element) xpath.evaluate(xpathExpr, doc, XPathConstants.NODE);
+
+            if (Objects.nonNull(logicalDiv)) {
+                labels.put("LABEL", logicalDiv.getAttribute("LABEL"));
+                labels.put("ORDERLABEL", logicalDiv.getAttribute("ORDERLABEL"));
+            }
+        } catch (XPathExpressionException | ParserConfigurationException | SAXException | IOException e) {
+            Helper.setErrorMessage(
+                    "Parsing Mets file failed!", e.getLocalizedMessage(), logger, e);
+        }
+        return labels;
+    }
+
 }
