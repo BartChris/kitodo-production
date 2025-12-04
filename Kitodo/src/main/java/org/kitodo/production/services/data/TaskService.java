@@ -316,8 +316,6 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
         } else if (Objects.equals(currentProcessingUser.getId(), user.getId())) {
             logger.info("do nothing - both are the same");
         } else {
-            currentProcessingUser.getProcessingTasks().remove(task);
-            user.getProcessingTasks().add(task);
             task.setProcessingUser(user);
         }
     }

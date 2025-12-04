@@ -18,6 +18,7 @@ import java.util.Objects;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.ForeignKey;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
@@ -26,6 +27,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+
+import org.hibernate.annotations.BatchSize;
 import org.kitodo.data.database.persistence.UserDAO;
 
 @Entity
@@ -84,7 +87,8 @@ public class User extends BaseBean {
                     foreignKey = @ForeignKey(name = "FK_user_x_role_role_id")) })
     private List<Role> roles;
 
-    @OneToMany(mappedBy = "processingUser", cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "processingUser", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
+    @BatchSize(size = 10)
     private List<Task> processingTasks;
 
     @ManyToMany(cascade = CascadeType.PERSIST)
