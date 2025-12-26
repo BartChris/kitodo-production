@@ -19,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import org.kitodo.data.database.beans.Process;
 import org.kitodo.data.database.beans.Task;
 import org.kitodo.data.database.exceptions.DAOException;
+import org.kitodo.export.ExportBatchState;
 import org.kitodo.export.ExportDms;
 import org.kitodo.production.services.ServiceManager;
 import org.kitodo.production.services.workflow.WorkflowControllerService;
@@ -86,6 +87,22 @@ public class ExportDmsTask extends EmptyTask {
         } catch (RuntimeException | DAOException | IOException e) {
             setException(e);
             exportSuccessful = false;
+        } finally {
+            ExportBatchState batch = exportDms.getBatchState();
+            if (Objects.nonNull(batch)) {
+                batch.finished(process);
+                Process parent = process.getParent();
+                if (Objects.nonNull(parent) && batch.isReady(parent) && batch.markStarted(parent)) {
+                    try {
+                        exportDms.startExport(parent);
+                    } catch (DAOException | RuntimeException e) {
+                        logger.error(
+                                "Failed to start parent export for process " + parent.getId(),
+                                e
+                        );
+                    }
+                }
+            }
         }
         try {
             if (exportDms.isOptimisticExportFlagSet()) {

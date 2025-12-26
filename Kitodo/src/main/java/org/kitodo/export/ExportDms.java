@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.Level;
@@ -63,6 +64,8 @@ public class ExportDms extends ExportMets {
     private boolean exportWithImages = true;
     private boolean optimisticExportFlagSet = false;
     private Task workFlowTask;
+    private boolean suppressHierarchyRecursion = false;
+    private ExportBatchState exportBatchState = null;
 
     public ExportDms() {
     }
@@ -111,7 +114,7 @@ public class ExportDms extends ExportMets {
         }
 
         boolean exportSuccessful = startExport(process, (URI) null);
-        if (Objects.nonNull(process.getParent())) {
+        if (!suppressHierarchyRecursion && Objects.nonNull(process.getParent())) {
             startExport(process.getParent());
         }
         if (wasNotAlreadyExported && !ConfigCore.getBooleanParameterOrDefaultValue(ParameterCore.ASYNCHRONOUS_AUTOMATIC_EXPORT)) {
@@ -225,25 +228,26 @@ public class ExportDms extends ExportMets {
         URI hotfolder = new File(process.getProject().getDmsImportRootPath()).toURI();
         String processTitle = Helper.getNormalizedTitle(process.getTitle());
         URI exportFolder = new File(hotfolder.getPath(), processTitle).toURI();
-
+        ReentrantLock lock = ExportDirectoryGuard.lock(exportFolder);
         // delete old export folder
-        if (!fileService.delete(exportFolder)) {
-            String message = Helper.getTranslation(ERROR_EXPORT, processTitle);
-            String description = Helper.getTranslation(EXPORT_DIR_DELETE, exportFolder.getPath());
-            Helper.setErrorMessage(message, description);
-            if (Objects.nonNull(exportDmsTask)) {
-                exportDmsTask.setException(new ExportException(message + ": " + description));
+        try {
+            if (!fileService.delete(exportFolder)) {
+                String message = Helper.getTranslation(ERROR_EXPORT, processTitle);
+                String description = Helper.getTranslation(EXPORT_DIR_DELETE, exportFolder.getPath());
+                Helper.setErrorMessage(message, description);
+                if (Objects.nonNull(exportDmsTask)) {
+                    exportDmsTask.setException(new ExportException(message + ": " + description));
+                }
+                return false;
             }
-            return false;
+            fileService.createDirectory(hotfolder, processTitle);
+            if (Objects.nonNull(exportDmsTask)) {
+                exportDmsTask.setProgress(1);
+            }
+            return exportImagesAndMetsToDestinationUri(process, gdzfile, exportFolder);
+        } finally {
+            ExportDirectoryGuard.unlock(exportFolder, lock);
         }
-
-        fileService.createDirectory(hotfolder, processTitle);
-
-        if (Objects.nonNull(exportDmsTask)) {
-            exportDmsTask.setProgress(1);
-        }
-
-        return exportImagesAndMetsToDestinationUri(process, gdzfile, exportFolder);
     }
 
     private boolean exportImagesAndMetsToDestinationUri(Process process, LegacyMetsModsDigitalDocumentHelper gdzfile,
@@ -376,6 +380,14 @@ public class ExportDms extends ExportMets {
         this.exportDmsTask = task;
     }
 
+    public void setBatchState(ExportBatchState exportBatchState) {
+        this.exportBatchState = exportBatchState;
+    }
+
+    public ExportBatchState getBatchState() {
+        return exportBatchState;
+    }
+
     /**
      * Run through all metadata and children of given docstruct to trim the strings
      * calls itself recursively.
@@ -392,6 +404,10 @@ public class ExportDms extends ExportMets {
         for (LegacyDocStructHelperInterface child : inStruct.getAllChildren()) {
             trimAllMetadata(child);
         }
+    }
+
+    public void setSuppressHierarchyRecursion(boolean suppressHierarchyRecursion) {
+        this.suppressHierarchyRecursion = suppressHierarchyRecursion;
     }
 
     /**
