@@ -425,11 +425,8 @@ public class BatchForm extends BaseForm {
 
         for (Batch selectedBatch : selectedBatches) {
             try {
-                for (Process process : selectedBatch.getProcesses()) {
-                    ExportDms dms = new ExportDms(
-                            ConfigCore.getBooleanParameterOrDefaultValue(ParameterCore.EXPORT_WITH_IMAGES));
-                    dms.startExport(process);
-                }
+                ExportDms.exportProcesses(selectedBatch.getProcesses(), null, ConfigCore
+                        .getBooleanParameterOrDefaultValue(ParameterCore.EXPORT_WITH_IMAGES));
             } catch (DAOException e) {
                 Helper.setErrorMessage(ERROR_READING, new Object[] {ObjectType.BATCH.getTranslationSingular() }, logger,
                     e);

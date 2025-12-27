@@ -13,6 +13,7 @@ package org.kitodo.production.helper.batch;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -138,9 +139,8 @@ public class BatchTaskHelper extends BatchHelper {
      */
     public void exportDMS() {
         for (Task step : this.steps) {
-            ExportDms export = new ExportDms();
             try {
-                export.startExport(step.getProcess());
+                ExportDms.exportProcesses(Collections.singletonList(step.getProcess()), step);
             } catch (DAOException e) {
                 Helper.setErrorMessage("errorExporting",
                     new Object[] {Helper.getTranslation("task"), step.getId() }, logger, e);

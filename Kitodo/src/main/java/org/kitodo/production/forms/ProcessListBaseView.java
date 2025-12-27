@@ -16,15 +16,12 @@ import com.itextpdf.text.DocumentException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,7 +31,6 @@ import org.kitodo.config.ConfigCore;
 import org.kitodo.config.enums.ParameterCore;
 import org.kitodo.data.database.beans.Process;
 import org.kitodo.data.database.exceptions.DAOException;
-import org.kitodo.export.ExportBatchState;
 import org.kitodo.export.ExportDms;
 import org.kitodo.production.enums.ChartMode;
 import org.kitodo.production.enums.ObjectType;
@@ -455,49 +451,11 @@ public class ProcessListBaseView extends BaseForm {
     }
 
     private void exportDMSForProcesses(List<Process> processes) {
-        ExportBatchState batch = new ExportBatchState();
-        ExportDms export = new ExportDms();
-        export.setBatchState(batch);
-        export.setSuppressHierarchyRecursion(true);
-
-        Set<Process> allToExport = new LinkedHashSet<>();
-        for (Process p : processes) {
-            allToExport.add(p);
-            allToExport.addAll(getAllParents(p));
+        try {
+            ExportDms.exportProcesses(processes, null);
+        } catch (DAOException e) {
+            throw new RuntimeException(e);
         }
-
-        List<Process> ordered = new ArrayList<>(allToExport);
-        ordered.sort(Comparator.comparingInt(this::getHierarchyDepth).reversed());
-
-        for (Process p : ordered) {
-            try {
-                batch.register(p);
-                export.startExport(p);
-            } catch (DAOException e) {
-                Helper.setErrorMessage(ERROR_EXPORTING,
-                        new Object[] {ObjectType.PROCESS.getTranslationSingular(), p.getId() }, logger, e);
-            }
-        }
-    }
-
-    private Set<Process> getAllParents(Process process) {
-        Set<Process> parents = new LinkedHashSet<>();
-        Process current = process.getParent();
-        while (current != null) {
-            parents.add(current);
-            current = current.getParent();
-        }
-        return parents;
-    }
-
-    private int getHierarchyDepth(Process process) {
-        int depth = 0;
-        Process current = process;
-        while (current.getParent() != null) {
-            depth++;
-            current = current.getParent();
-        }
-        return depth;
     }
 
     /**
@@ -582,9 +540,8 @@ public class ProcessListBaseView extends BaseForm {
      * Export DMS.
      */
     public void exportDMS(Process process) {
-        ExportDms export = new ExportDms();
         try {
-            export.startExport(process);
+            ExportDms.exportProcesses(Collections.singletonList(process), null);
         } catch (DAOException e) {
             Helper.setErrorMessage(ERROR_EXPORTING,
                     new Object[] {ObjectType.PROCESS.getTranslationSingular(), process }, logger, e);

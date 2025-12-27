@@ -753,14 +753,12 @@ public class KitodoScriptService {
     }
 
     private void exportDms(List<Process> processes, String exportImages) {
-        boolean withoutImages = Objects.nonNull(exportImages) && exportImages.equalsIgnoreCase("false");
-        for (Process process : processes) {
-            try {
-                ExportDms dms = new ExportDms(!withoutImages);
-                dms.startExport(process);
-            } catch (DAOException e) {
-                logger.error(e.getMessage(), e);
-            }
+        // 1. Extract config early
+        boolean withImages = Objects.isNull(exportImages) || !exportImages.equalsIgnoreCase("false");
+        try {
+            ExportDms.exportProcesses(processes, null, withImages);
+        } catch (DAOException e) {
+            Helper.setErrorMessage("Export failed", e.getMessage(), logger, e);
         }
     }
 

@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -487,9 +488,8 @@ public class CurrentTaskForm extends BaseForm {
      */
     public void exportDMS() {
         Stopwatch stopwatch = new Stopwatch(this, "exportDMS");
-        ExportDms export = new ExportDms();
         try {
-            export.startExport(this.currentTask.getProcess());
+            ExportDms.exportProcesses(Collections.singletonList(this.currentTask.getProcess()), null);
         } catch (DAOException e) {
             Helper.setErrorMessage("errorExport", new Object[] {this.currentTask.getProcess().getTitle() }, logger, e);
         }

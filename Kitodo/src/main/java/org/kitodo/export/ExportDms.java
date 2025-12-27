@@ -51,7 +51,6 @@ import org.kitodo.production.model.Subfolder;
 import org.kitodo.production.services.ServiceManager;
 import org.kitodo.production.services.data.ProcessService;
 import org.kitodo.production.services.file.FileService;
-import org.kitodo.production.services.workflow.WorkflowControllerService;
 
 public class ExportDms extends ExportMets {
     private static final Logger logger = LogManager.getLogger(ExportDms.class);
@@ -64,33 +63,48 @@ public class ExportDms extends ExportMets {
     private boolean exportWithImages = true;
     private boolean optimisticExportFlagSet = false;
     private Task workFlowTask;
-    private boolean suppressHierarchyRecursion = false;
     private ExportBatchState exportBatchState = null;
 
     public ExportDms() {
-    }
-
-    public ExportDms(boolean exportImages) {
-        this.exportWithImages = exportImages;
     }
 
     public ExportDms(Task workFlowTask) {
         this.workFlowTask = workFlowTask;
     }
 
+    public void setExportWithImages(boolean exportWithImages) {
+        this.exportWithImages = exportWithImages;
+    }
+
     /**
-     * Export to DMS.
-     *
-     * @param task
-     *            Task object
-     * @throws IOException
-     *             if I/O fails while running a script for a script condition of
-     *             a subsequent task, or the METS file cannot be read when
-     *             evaluating an XPath condition
+     * Default export call (usually from UI) which assumes images should be included.
      */
-    public void startExport(Task task) throws DAOException, IOException {
-        if (startExport(task.getProcess())) {
-            new WorkflowControllerService().close(task);
+    public static void exportProcesses(List<Process> processes, Task taskOrNull) throws DAOException {
+        exportProcesses(processes, taskOrNull, true); // Default to true
+    }
+
+    /**
+     * Executes a hierarchical export using a bottom-up strategy to ensure data integrity.
+     * Organizes processes via a planner to handle dependencies before starting the batch.
+     *
+     * @param processes  the list of processes to be planned and exported
+     * @param taskOrNull optional task context for logging and status updates
+     * @param withImages flag to include image files in the export payload
+     */
+    public static void exportProcesses(List<Process> processes, Task taskOrNull, boolean withImages)
+            throws DAOException {
+
+        ExportHierarchyPlanner planner = new ExportHierarchyPlanner();
+        List<Process> planned = planner.plan(processes);
+
+        ExportBatchState batch = new ExportBatchState();
+        planned.forEach(batch::register);
+
+        ExportDms export = new ExportDms(taskOrNull);
+        export.setExportWithImages(withImages);
+        export.setBatchState(batch);
+        for (Process p : planned) {
+            export.startExport(p);
         }
     }
 
@@ -102,21 +116,16 @@ public class ExportDms extends ExportMets {
      */
     @Override
     public boolean startExport(Process process) throws DAOException {
-        if (!exportCompletedChildren(process.getChildren())) {
-            return false;
-        }
-
+        //if (!exportCompletedChildren(process.getChildren())) {
+        //    return false;
+        //}
         boolean wasNotAlreadyExported = !process.isExported();
         if (wasNotAlreadyExported) {
             process.setExported(true);
             processService.save(process);
             this.optimisticExportFlagSet = true;
         }
-
         boolean exportSuccessful = startExport(process, (URI) null);
-        if (!suppressHierarchyRecursion && Objects.nonNull(process.getParent())) {
-            startExport(process.getParent());
-        }
         if (wasNotAlreadyExported && !ConfigCore.getBooleanParameterOrDefaultValue(ParameterCore.ASYNCHRONOUS_AUTOMATIC_EXPORT)) {
             process.setExported(exportSuccessful);
             processService.save(process);
@@ -404,10 +413,6 @@ public class ExportDms extends ExportMets {
         for (LegacyDocStructHelperInterface child : inStruct.getAllChildren()) {
             trimAllMetadata(child);
         }
-    }
-
-    public void setSuppressHierarchyRecursion(boolean suppressHierarchyRecursion) {
-        this.suppressHierarchyRecursion = suppressHierarchyRecursion;
     }
 
     /**

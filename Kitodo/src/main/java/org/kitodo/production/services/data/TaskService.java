@@ -613,7 +613,7 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
      *            as Task object
      */
     public void executeDmsExport(Task task) throws DAOException, IOException {
-        new ExportDms(task).startExport(task);
+        ExportDms.exportProcesses(Collections.singletonList(task.getProcess()), task);
     }
 
     /**
