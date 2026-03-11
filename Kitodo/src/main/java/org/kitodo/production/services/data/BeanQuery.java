@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -24,6 +25,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -233,6 +235,32 @@ public class BeanQuery {
             parameters.put(entry.getKey(), ids.isEmpty() ? NO_HIT : ids);
             iterator.remove();
         }
+    }
+
+    /**
+     * Searches the index and inserts the IDs into the HQL query parameters.
+     */
+    public Set<Integer> performIndexSearchesAndReturnIDs() {
+
+        Set<Integer> idList = new HashSet<>();
+
+        if (indexQueries.isEmpty()) {
+            return idList;
+        }
+        List<Pair<String, String>> terms = new ArrayList<>();
+        for (Entry<String, Pair<FilterField, String>> entry : indexQueries.entrySet()) {
+
+            String field = entry.getValue().getLeft().getSearchField();
+            String token = entry.getValue().getRight();
+            terms.add(Pair.of(field, token));
+            // remove HQL restrictions referencing this parameter
+            String parameterName = entry.getKey();
+            restrictions.removeIf(r -> r.contains(":" + parameterName));
+        }
+        // run ONE scroll query
+        idList.addAll(indexingService.searchIdsByScroll(Process.class, terms));
+        indexQueries.clear();
+        return idList;
     }
 
     /**

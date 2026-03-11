@@ -12,15 +12,21 @@
 package org.kitodo.production.services.index;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+
 import java.util.concurrent.CompletionStage;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.exception.DataException;
 import org.hibernate.search.engine.search.projection.SearchProjection;
+import org.hibernate.search.engine.search.query.SearchScroll;
+import org.hibernate.search.engine.search.query.SearchScrollResult;
 import org.hibernate.search.mapper.orm.Search;
 import org.hibernate.search.mapper.orm.massindexing.MassIndexer;
 import org.hibernate.search.mapper.orm.session.SearchSession;
@@ -145,6 +151,40 @@ public class IndexingService {
                     searchField).matching(value)).fetchAll().hits();
             logger.debug("Searching {} IDs in field \"{}\" for \"{}\": {} hits", beanClass.getSimpleName(), searchField,
                     value, ids.size());
+            return ids;
+        }
+    }
+
+    public Set<Integer> searchIdsByScroll(Class<? extends BaseBean> beanClass,
+                                          List<Pair<String, String>> terms) {
+
+        try (Session ormSession = HibernateUtil.getSession()) {
+            SearchSession searchSession = Search.session(ormSession);
+            SearchProjection<Integer> idField = searchSession.scope(beanClass)
+                    .projection()
+                    .field("id", Integer.class)
+                    .toProjection();
+            Set<Integer> ids = new HashSet<>();
+            try (SearchScroll<Integer> scroll = searchSession.search(beanClass)
+                    .select(idField)
+                    .where(f -> {
+                        var bool = f.bool();
+                        for (Pair<String, String> term : terms) {
+                            bool.must(f.match()
+                                    .field(term.getLeft())
+                                    .matching(term.getRight()));
+                        }
+                        return bool;
+                    })
+                    .scroll(10_000)) {
+                while (true) {
+                    SearchScrollResult<Integer> chunk = scroll.next();
+                    if (!chunk.hasHits()) {
+                        break;
+                    }
+                    ids.addAll(chunk.hits());
+                }
+            }
             return ids;
         }
     }

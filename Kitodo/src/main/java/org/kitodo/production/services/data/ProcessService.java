@@ -2534,7 +2534,6 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             int sessionClientId) {
 
         BeanQuery query = new BeanQuery(Process.class);
-
         if (StringUtils.isNotBlank(filter)) {
             query.restrictWithUserFilterString(filter);
         }
@@ -2545,8 +2544,8 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             query.addBooleanRestriction("project.active", Boolean.TRUE);
         }
         query.restrictToClient(sessionClientId);
-        query.performIndexSearches();
-
+        Set<Integer> indexIds = query.performIndexSearchesAndReturnIDs();
+        boolean applyIndexFilter = !indexIds.isEmpty();
         query.addInnerJoin("project proj");
         query.defineSorting("id", SortOrder.ASCENDING);
 
@@ -2556,9 +2555,12 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
                 + query.formQueryWithoutSelect();
 
         List<Object[]> rows = dao.getProjectionByQuery(hql, query.getQueryParameters());
-
         List<ProcessExportDTO> result = new ArrayList<>(rows.size());
         for (Object[] row : rows) {
+            Integer processId = (Integer) row[0];
+            if (applyIndexFilter && !indexIds.contains(processId)) {
+                continue;
+            }
             result.add(new ProcessExportDTO(
                     (Integer) row[0],        // id
                     (String) row[1],         // title
