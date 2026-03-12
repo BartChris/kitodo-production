@@ -2534,6 +2534,7 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
             int sessionClientId) {
 
         BeanQuery query = new BeanQuery(Process.class);
+
         if (StringUtils.isNotBlank(filter)) {
             query.restrictWithUserFilterString(filter);
         }
@@ -2545,7 +2546,16 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
         }
         query.restrictToClient(sessionClientId);
         Set<Integer> indexIds = query.performIndexSearchesAndReturnIDs();
-        boolean applyIndexFilter = !indexIds.isEmpty();
+        boolean applyIndexFilter = false;
+        if (!indexIds.isEmpty()) {
+            if (indexIds.size() <= 1000) {
+                // push filtering into SQL
+                query.addInCollectionRestriction("id", indexIds);
+            } else {
+                // large result set → Java filtering
+                applyIndexFilter = true;
+            }
+        }
         query.addInnerJoin("project proj");
         query.defineSorting("id", SortOrder.ASCENDING);
 
