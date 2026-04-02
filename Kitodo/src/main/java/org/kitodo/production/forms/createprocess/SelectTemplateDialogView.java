@@ -33,8 +33,8 @@ public class SelectTemplateDialogView implements Serializable {
     private int selectedTemplateId = 0;
     private Project project;
     protected static final String ERROR_LOADING_ONE = "errorLoadingOne";
-    private static final String CREATE_PROCESS_PATH = "/pages/processFromTemplate.jsf?faces-redirect=true";
-    private static final String MASSIMPORT_PATH = "/pages/massImport.jsf?faces-redirect=true";
+    private static final String CREATE_PROCESS_PATH = "/pages/processFromTemplate?faces-redirect=true";
+    private static final String MASSIMPORT_PATH = "/pages/massImport?faces-redirect=true";
     private String redirectPath;
 
     /**
@@ -103,7 +103,7 @@ public class SelectTemplateDialogView implements Serializable {
         }
         List<Template> availableTemplates = this.project.getActiveTemplates();
         if (availableTemplates.size() == 1) {
-            this.selectedTemplateId = availableTemplates.get(0).getId();
+            this.selectedTemplateId = availableTemplates.getFirst().getId();
         }
         if (this.selectedTemplateId > 0) {
             try {

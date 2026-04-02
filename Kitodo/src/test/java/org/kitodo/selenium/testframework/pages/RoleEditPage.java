@@ -40,7 +40,7 @@ public class RoleEditPage extends EditPage<RoleEditPage> {
     private WebElement clientAuthoritiesPickList;
 
     public RoleEditPage() {
-        super("pages/roleEdit.jsf");
+        super("pages/roleEdit");
     }
 
     @Override
@@ -97,7 +97,7 @@ public class RoleEditPage extends EditPage<RoleEditPage> {
         return this;
     }
 
-    public UsersPage save() throws IllegalAccessException, InstantiationException {
+    public UsersPage save() throws ReflectiveOperationException {
         clickButtonAndWaitForRedirect(saveButton, Pages.getUsersPage().getUrl());
         return Pages.getUsersPage();
     }

@@ -30,8 +30,6 @@ import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 
 import org.apache.commons.lang3.StringUtils;
-import org.hibernate.annotations.LazyCollection;
-import org.hibernate.annotations.LazyCollectionOption;
 import org.kitodo.api.externaldatamanagement.ImportConfigurationType;
 import org.kitodo.data.database.persistence.ImportConfigurationDAO;
 import org.kitodo.data.database.persistence.MappingFileDAO;
@@ -63,6 +61,9 @@ public class ImportConfiguration extends BaseBean {
 
     @Column(name = "metadata_format")
     private String metadataFormat;
+
+    @Column(name = "validate_external_data")
+    private Boolean validateExternalData = true;
 
     @Column(name = "default_import_depth")
     private Integer defaultImportDepth;
@@ -163,8 +164,7 @@ public class ImportConfiguration extends BaseBean {
     @Column(name = "metadata_record_title_xpath")
     private String metadataRecordTitleXPath;
 
-    @ManyToMany(cascade = CascadeType.PERSIST)
-    @LazyCollection(LazyCollectionOption.FALSE)
+    @ManyToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)
     @JoinTable(name = "client_x_importconfiguration", joinColumns = {
         @JoinColumn(name = "importconfiguration_id",
                 foreignKey = @ForeignKey(name = "FK_client_x_importconfiguration_importconfiguration_id")) },
@@ -305,6 +305,24 @@ public class ImportConfiguration extends BaseBean {
      */
     public void setMetadataFormat(String metadataFormat) {
         this.metadataFormat = metadataFormat;
+    }
+
+    /**
+     * Get validateExternalData.
+     *
+     * @return value of validateExternalData
+     */
+    public Boolean getValidateExternalData() {
+        return validateExternalData;
+    }
+
+    /**
+     * Set validateExternalData.
+     *
+     * @param validateExternalData as java.lang.Boolean
+     */
+    public void setValidateExternalData(Boolean validateExternalData) {
+        this.validateExternalData = validateExternalData;
     }
 
     /**

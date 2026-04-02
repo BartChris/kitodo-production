@@ -35,7 +35,7 @@ public class RulesetEditPage extends EditPage<RulesetEditPage> {
     private WebElement errorMessage;
 
     public RulesetEditPage() {
-        super("pages/rulesetEdit.jsf");
+        super("pages/rulesetEdit");
     }
 
     @Override
@@ -56,7 +56,7 @@ public class RulesetEditPage extends EditPage<RulesetEditPage> {
         return this;
     }
 
-    public ProjectsPage save() throws IllegalAccessException, InstantiationException {
+    public ProjectsPage save() throws ReflectiveOperationException {
         clickButtonAndWaitForRedirect(saveButton, Pages.getProjectsPage().getUrl());
         return Pages.getProjectsPage();
     }

@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -109,7 +108,7 @@ public class ListingST extends BaseTestSelenium {
         List<String> statistics = desktopPage.getStatistics();
 
         long countInDatabase = ServiceManager.getTaskService().count();
-        long countDisplayed = Long.parseLong(statistics.get(0));
+        long countDisplayed = Long.parseLong(statistics.getFirst());
         assertEquals(countInDatabase, countDisplayed, "Displayed wrong count for task statistics");
 
         countInDatabase = ServiceManager.getUserService().count();
@@ -188,14 +187,15 @@ public class ListingST extends BaseTestSelenium {
 
         List<String> detailsProject = projectsPage.getProjectDetails();
         assertEquals(1, detailsProject.size(), "Displayed wrong number of project's details");
-        assertEquals("Test Owner", detailsProject.get(0), "Displayed wrong project's METS owner");
+        assertEquals("Test Owner", detailsProject.getFirst(), "Displayed wrong project's METS owner");
 
         List<String> templatesProject = projectsPage.getProjectTemplates();
         assertEquals(2, templatesProject.size(), "Displayed wrong number of project's templates");
         assertEquals("Fourth template", templatesProject.get(1), "Displayed wrong project's template");
 
-        int templatesInDatabase = ServiceManager.getTemplateService().getAll().stream()
-                .filter(template -> template.getClient().getId() == 1).collect(Collectors.counting()).intValue();
+        int templatesInDatabase = (int) ServiceManager.getTemplateService().getAll().stream()
+                .filter(template -> template.getClient().getId() == 1)
+                .count();
         int templatesDisplayed = projectsPage.countListedTemplates();
 
         List<String> detailsTemplate =  projectsPage.getTemplateDetails();
@@ -206,8 +206,9 @@ public class ListingST extends BaseTestSelenium {
         //assertEquals("Displayed wrong template's docket", "second", detailsTemplate.get(2));
         //assertEquals("Displayed wrong template's project", "First project", detailsTemplate.get(2));
 
-        int workflowsInDatabase = ServiceManager.getWorkflowService().getAll().stream()
-                .filter(workflow -> workflow.getClient().getId() == 1).collect(Collectors.counting()).intValue();
+    int workflowsInDatabase = (int) ServiceManager.getWorkflowService().getAll().stream()
+        .filter(workflow -> workflow.getClient().getId() == 1)
+        .count();
         int workflowsDisplayed = projectsPage.countListedWorkflows();
         assertEquals(workflowsInDatabase, workflowsDisplayed, "Displayed wrong number of workflows");
 

@@ -19,9 +19,13 @@
         xmlns:p="http://primefaces.org/ui">
 
     <!--@elvariable id="id" type="java.lang.Integer"-->
+    <!--@elvariable id="referrerListOptions" type="java.lang.String"-->
+
     <f:metadata>
         <f:viewParam name="id"/>
         <f:viewAction action="#{importConfigurationEditView.load(id)}"/>
+        <f:viewParam name="referrerListOptions"/>
+        <f:viewAction action="#{importConfigurationEditView.setReferrerListOptionsFromTemplate(referrerListOptions)}"/>
     </f:metadata>
 
     <!--@elvariable id="isEditMode" type="boolean"-->
@@ -48,7 +52,7 @@
 
         <p:button id="cancel" value="#{msgs.cancel}"
                   onclick="setConfirmUnload(false);"
-                  outcome="projects?keepPagination=true"
+                  outcome="projects?tab=importConfigurationsTab&amp;#{importConfigurationEditView.referrerListOptions}"
                   icon="fa fa-times fa-lg" iconPos="right"
                   styleClass="secondary"/>
         <p:commandButton id="save"
@@ -207,8 +211,8 @@
     </ui:define>
 
     <ui:define name="breadcrumbs">
-        <p:menuitem value="#{msgs.desktop}" url="desktop.jsf" icon="fa fa-home"/>
-        <p:menuitem value="#{msgs.projects}" url="projects.jsf" icon="fa fa-archive"/>
+        <p:menuitem value="#{msgs.desktop}" url="desktop" icon="fa fa-home"/>
+        <p:menuitem value="#{msgs.projects}" url="projects" icon="fa fa-archive"/>
         <p:menuitem value="#{msgs['importConfig.mode.edit']}" rendered="#{isEditMode}" icon="fa fa-cogs"/>
         <p:menuitem value="#{msgs['importConfig.mode.create']}" rendered="#{isCreateMode}" icon="fa fa-cogs"/>
         <p:menuitem value="#{msgs['importConfig.mode.view']}" rendered="#{isViewMode}" icon="fa fa-cogs"/>

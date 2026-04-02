@@ -82,7 +82,8 @@ public class EditingST extends BaseTestSelenium {
         await().untilAsserted(() -> assertEquals(1, ServiceManager.getBatchService().getByQuery("FROM Batch WHERE title = 'SeleniumBatch'").size(), "Batch was not renamed!"));
 
         assertEquals(1, ServiceManager.getBatchService()
-                .getByQuery("FROM Batch WHERE title = 'SeleniumBatch'").get(0).getProcesses().size(), "Process was not removed from batch");
+                .getByQuery("FROM Batch WHERE title = 'SeleniumBatch'").getFirst().getProcesses().size(),
+                "Process was not removed from batch");
     }
 
     @Test
@@ -148,8 +149,8 @@ public class EditingST extends BaseTestSelenium {
     public void editRulesetTest() throws Exception {
         RulesetEditPage rulesetEditPage = projectsPage.editRuleset();
         List<WebElement> functionalMetadataLists = Browser.getDriver().findElements(By.className("functional-metadata-list"));
-        assertEquals(11, functionalMetadataLists.size(), "Wrong number of functional metadata lists");
-        assertEquals("HauptTitel",  functionalMetadataLists.get(7)
+        assertEquals(10, functionalMetadataLists.size(), "Wrong number of functional metadata lists");
+        assertEquals("HauptTitel",  functionalMetadataLists.get(6)
                 .findElement(By.tagName("tbody"))
                 .findElement(By.tagName("tr"))
                 .findElement(By.tagName("td"))

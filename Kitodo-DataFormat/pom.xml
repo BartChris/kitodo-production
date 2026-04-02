@@ -46,7 +46,7 @@
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
+            <artifactId>junit-jupiter</artifactId>
         </dependency>
         <dependency>
             <groupId>org.glassfish.jaxb</groupId>
@@ -98,7 +98,13 @@
                             <resources>
                                 <resource>
                                     <directory>src/main/resources/xsd</directory>
-                                    <include>*.xsd</include>
+                                    <include>kitodo.xsd</include>
+                                    <filtering>false</filtering>
+                                </resource>
+                                <resource>
+                                    <directory>${project.basedir}/../Kitodo/src/main/resources/schemata</directory>
+                                    <include>mets.xsd</include>
+                                    <include>xlink.xsd</include>
                                     <filtering>false</filtering>
                                 </resource>
                             </resources>
@@ -110,7 +116,7 @@
             <plugin>
                 <groupId>org.jvnet.jaxb</groupId>
                 <artifactId>jaxb-maven-plugin</artifactId>
-                <version>4.0.11</version>
+                <version>4.0.12</version>
                 <executions>
                     <execution>
                         <phase>process-sources</phase>
@@ -142,7 +148,7 @@
                                 <plugin>
                                     <groupId>org.jvnet.jaxb</groupId>
                                     <artifactId>jaxb-plugins</artifactId>
-                                    <version>4.0.11</version>
+                                    <version>4.0.12</version>
                                 </plugin>
                             </plugins>
                         </configuration>

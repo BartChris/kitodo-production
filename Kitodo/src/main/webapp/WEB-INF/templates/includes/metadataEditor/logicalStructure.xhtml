@@ -156,7 +156,7 @@
         </p:tree>
         <p:contextMenu for="logicalTree" id="contextMenuLogicalTree" widgetVar="contextMenuLogicalTree">
             <p:menuitem value="#{msgs.addElement}"
-                        rendered="#{DataEditorForm.selectedMedia.size() lt 1 and not DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.data.linked}"
+                        rendered="#{DataEditorForm.structurePanel.isAddingElementPossible()}"
                         icon="fa fa-plus fa-sm"
                         styleClass="plain"
                         disabled="#{readOnly}"
@@ -167,9 +167,19 @@
                         update="dialogAddDocStrucTypeDialog">
                 <f:actionListener binding="#{DataEditorForm.addDocStrucTypeDialog.preparePreselectedViews()}"/>
             </p:menuitem>
+            <p:menuitem value="#{msgs['dataEditor.linkProcess']}"
+                        rendered="#{DataEditorForm.structurePanel.isLinkingProcessPossible()}"
+                        styleClass="plain link-process"
+                        disabled="#{readOnly}"
+                        icon="fa fa-external-link fa-sm"
+                        onclick="$('#loadingScreen').show()"
+                        oncomplete="$('#loadingScreen').hide(); PF('linkProcess').show()"
+                        actionListener="#{DataEditorForm.linkProcessDialog.resetValues}"
+                        process="@this"
+                        update="linkProcessDialog" />
             <p:menuitem
                     value="#{DataEditorForm.consecutivePagesSelected() ? msgs.addElement.concat(' ').concat(msgs.assignMedia) : msgs['dataEditor.removeElement.noConsecutivePagesSelected']}"
-                    rendered="#{DataEditorForm.selectedMedia.size() ge 1 and not DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.data.linked}"
+                    rendered="#{DataEditorForm.selectedMedia.size() ge 1 and not DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.data.linked and DataEditorForm.structurePanel.selectedLogicalNodeIfSingle ne null}"
                     icon="fa fa-plus fa-sm"
                     styleClass="plain"
                     disabled="#{readOnly or not DataEditorForm.consecutivePagesSelected()}"
@@ -231,7 +241,7 @@
             <p:menuitem value="#{msgs.selectAssignedMedia}"
                         action="#{DataEditorForm.structurePanel.selectAssignedMedia}"
                         onclick="metadataEditor.logicalTree.selectAssignedMedia()"
-                        rendered="#{DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.type eq StructurePanel.STRUCTURE_NODE_TYPE}"
+                        rendered="#{DataEditorForm.structurePanel.canSelectAssignedMedia()}"
                         icon="fa fa-check-square-o fa-sm"
                         styleClass="plain selectAssignedMedia"
                         process="@this"/>
@@ -243,24 +253,28 @@
                         update="uploadFileDialog"
                         disabled="#{readOnly}"
                         process="@this"/>
-            <p:menuitem value="#{DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.data.linked ? msgs.unlinkProcess : msgs.removeElement}"
-                        rendered="#{DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.data.dataObject ne null and DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.type ne StructurePanel.VIEW_NODE_TYPE and DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.type ne StructurePanel.MEDIA_PARTIAL_NODE_TYPE}"
-                        icon="fa fa-trash fa-sm"
-                        styleClass="plain"
-                        disabled="#{readOnly}"
+            <p:menuitem value="#{msgs['metadataEdit']}"
+                        rendered="#{DataEditorForm.structurePanel.isMetadataEditingPossible()}"
+                        disabled="#{!DataEditorForm.canLinkedProcessBeOpenedInMetadataEditor()}"
+                        icon="fa fa-list-alt fa-lg"
+                        styleClass="plain editLinkedMetadata"
                         onclick="$('#loadingScreen').show()"
                         oncomplete="$('#loadingScreen').hide()"
-                        action="#{DataEditorForm.deleteStructure()}"
-                        process="@this"
-                        update="logicalTree
-                                paginationForm:paginationWrapperPanel
-                                metadataAccordion:logicalMetadataHeader
-                                metadataAccordion:logicalMetadataWrapperPanel
-                                galleryWrapperPanel"/>
+                        actionListener="#{DataEditorForm.checkConditionsForOpeningLinkedProcessInMetadataEditor()}"
+                        action="#{DataEditorForm.openLinkedProcess()}"
+                        process="@this"/>
+            <p:menuitem value="#{msgs['metadataEditNewTab']}"
+                        target="_blank"
+                        url="#{DataEditorForm.getUrlOfLinkedProcess()}"
+                        rendered="#{DataEditorForm.structurePanel.isMetadataEditingPossible()}"
+                        disabled="#{!DataEditorForm.canLinkedProcessBeOpenedInMetadataEditor()}"
+                        icon="fa fa-list-alt fa-lg"
+                        styleClass="plain editLinkedMetadata"
+                        process="@this"/>
             <p:menuitem value="#{msgs.deleteMedia}"
                         rendered="#{SecurityAccessController.hasAuthorityToDeleteMedia() and DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.type eq StructurePanel.VIEW_NODE_TYPE}"
                         icon="fa fa-trash fa-sm"
-                        styleClass="plain"
+                        styleClass="plain removeSelectedMedia"
                         disabled="#{readOnly}"
                         onclick="$('#loadingScreen').show()"
                         oncomplete="$('#loadingScreen').hide()"
@@ -283,6 +297,20 @@
                         process="@this"
                         update="numberOfScans
                                 logicalTree
+                                paginationForm:paginationWrapperPanel
+                                metadataAccordion:logicalMetadataHeader
+                                metadataAccordion:logicalMetadataWrapperPanel
+                                galleryWrapperPanel"/>
+            <p:menuitem value="#{DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.data.linked ? msgs.unlinkProcess : msgs.removeElement}"
+                        rendered="#{DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.data.dataObject ne null and DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.type ne StructurePanel.VIEW_NODE_TYPE and DataEditorForm.structurePanel.selectedLogicalNodeIfSingle.type ne StructurePanel.MEDIA_PARTIAL_NODE_TYPE}"
+                        icon="fa fa-trash fa-sm"
+                        styleClass="plain unlink-process"
+                        disabled="#{readOnly}"
+                        onclick="$('#loadingScreen').show()"
+                        oncomplete="$('#loadingScreen').hide()"
+                        action="#{DataEditorForm.deleteStructure()}"
+                        process="@this"
+                        update="logicalTree
                                 paginationForm:paginationWrapperPanel
                                 metadataAccordion:logicalMetadataHeader
                                 metadataAccordion:logicalMetadataWrapperPanel

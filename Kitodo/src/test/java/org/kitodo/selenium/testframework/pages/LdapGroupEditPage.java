@@ -97,7 +97,7 @@ public class LdapGroupEditPage extends EditPage<LdapGroupEditPage> {
     private WebElement sambaKickoffTimeInput;
 
     public LdapGroupEditPage() {
-        super("pages/ldapgroupEdit.jsf");
+        super("pages/ldapgroupEdit");
     }
 
     @Override
@@ -153,7 +153,7 @@ public class LdapGroupEditPage extends EditPage<LdapGroupEditPage> {
         return ldapGroup;
     }
 
-    public UsersPage save() throws IllegalAccessException, InstantiationException {
+    public UsersPage save() throws ReflectiveOperationException {
         clickButtonAndWaitForRedirect(saveButton, Pages.getUsersPage().getUrl());
         return Pages.getUsersPage();
     }

@@ -40,7 +40,7 @@ public class SelectProjectDialogView implements Serializable {
     private int selectedProjectId = 0;
     private Template template;
     protected static final String ERROR_LOADING_ONE = "errorLoadingOne";
-    private static final String CREATE_PROCESS_PATH = "/pages/processFromTemplate.jsf?faces-redirect=true";
+    private static final String CREATE_PROCESS_PATH = "/pages/processFromTemplate?faces-redirect=true";
 
     /**
      * Get template.
@@ -103,7 +103,7 @@ public class SelectProjectDialogView implements Serializable {
      */
     public void createProcessFromTemplate() {
         if (this.template.getProjects().size() == 1) {
-            this.selectedProjectId = this.template.getProjects().get(0).getId();
+            this.selectedProjectId = this.template.getProjects().getFirst().getId();
         }
         if (this.selectedProjectId > 0) {
             try {

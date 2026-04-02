@@ -234,7 +234,7 @@ public class MetadataValidation implements MetadataValidationInterface {
 
         KeySetView<PhysicalDivision, ?> unassignedPhysicalDivisions = ConcurrentHashMap.newKeySet();
         unassignedPhysicalDivisions.addAll(Workpiece.treeStream(workpiece.getPhysicalStructure())
-                .filter(physicalDivision -> !physicalDivision.getMediaFiles().isEmpty()).collect(Collectors.toList()));
+                .filter(physicalDivision -> !physicalDivision.getMediaFiles().isEmpty()).toList());
         Workpiece.treeStream(workpiece.getLogicalStructure()).flatMap(structure -> structure.getViews().stream())
                 .map(View::getPhysicalDivision)
                 .forEach(unassignedPhysicalDivisions::remove);
@@ -390,7 +390,7 @@ public class MetadataValidation implements MetadataValidationInterface {
      * @return a new METS XML element access
      */
     private static MetsXmlElementAccessInterface createMetsXmlElementAccess() {
-        return new KitodoServiceLoader<MetsXmlElementAccessInterface>(MetsXmlElementAccessInterface.class).loadModule();
+        return new KitodoServiceLoader<>(MetsXmlElementAccessInterface.class).loadModule();
     }
 
     /**
@@ -399,7 +399,7 @@ public class MetadataValidation implements MetadataValidationInterface {
      * @return a file management
      */
     private static FileManagementInterface getFileManagement() {
-        return new KitodoServiceLoader<FileManagementInterface>(FileManagementInterface.class).loadModule();
+        return new KitodoServiceLoader<>(FileManagementInterface.class).loadModule();
     }
 
     /**
@@ -408,7 +408,7 @@ public class MetadataValidation implements MetadataValidationInterface {
      * @return a ruleset management
      */
     private static RulesetManagementInterface getRulesetManagement() {
-        return new KitodoServiceLoader<RulesetManagementInterface>(RulesetManagementInterface.class).loadModule();
+        return new KitodoServiceLoader<>(RulesetManagementInterface.class).loadModule();
     }
 
     /**

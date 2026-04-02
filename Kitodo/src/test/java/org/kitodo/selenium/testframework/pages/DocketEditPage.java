@@ -35,7 +35,7 @@ public class DocketEditPage extends EditPage<DocketEditPage> {
     private WebElement errorMessage;
 
     public DocketEditPage() {
-        super("pages/docketEdit.jsf");
+        super("pages/docketEdit");
     }
 
     @Override
@@ -50,7 +50,7 @@ public class DocketEditPage extends EditPage<DocketEditPage> {
         return this;
     }
 
-    public ProjectsPage save() throws IllegalAccessException, InstantiationException {
+    public ProjectsPage save() throws ReflectiveOperationException {
         clickButtonAndWaitForRedirect(saveButton, Pages.getProjectsPage().getUrl());
         return Pages.getProjectsPage();
     }

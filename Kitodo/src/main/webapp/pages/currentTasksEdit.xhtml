@@ -56,10 +56,13 @@
         <ui:include src="/WEB-INF/templates/includes/comments/newCommentDialog.xhtml"/>
         <ui:include src="/WEB-INF/templates/includes/comments/editCommentDialog.xhtml"/>
         <ui:include src="/WEB-INF/templates/includes/currentTasksEdit/ltpValidationReportDialog.xhtml"/>
+        <ui:include src="/WEB-INF/templates/includes/validationErrorsDialog.xhtml">
+            <ui:param name="validatableForm" value="#{CurrentTaskForm}"/>
+        </ui:include>
     </ui:define>
     <ui:define name="breadcrumbs">
-        <p:menuitem value="#{msgs.desktop}" url="desktop.jsf" icon="fa fa-home"/>
-        <p:menuitem value="#{msgs.tasks}" url="tasks.jsf" icon="fa fa-paperclip"/>
+        <p:menuitem value="#{msgs.desktop}" url="desktop" icon="fa fa-home"/>
+        <p:menuitem value="#{msgs.tasks}" url="tasks" icon="fa fa-paperclip"/>
         <p:menuitem value="#{msgs.taskDetails}" icon="fa fa-paperclip"/>
     </ui:define>
 

@@ -31,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -42,6 +43,7 @@ import org.kitodo.api.dataformat.PhysicalDivision;
 import org.kitodo.api.dataformat.View;
 import org.kitodo.data.database.beans.Process;
 import org.kitodo.data.database.beans.Template;
+import org.kitodo.exceptions.FileStructureValidationException;
 import org.kitodo.exceptions.NoSuchMetadataFieldException;
 import org.kitodo.exceptions.UnknownTreeNodeDataException;
 import org.kitodo.production.helper.Helper;
@@ -50,10 +52,10 @@ import org.kitodo.production.model.Subfolder;
 import org.kitodo.production.services.ServiceManager;
 import org.primefaces.event.NodeCollapseEvent;
 import org.primefaces.event.NodeExpandEvent;
-import org.primefaces.event.NodeSelectEvent;
 import org.primefaces.event.TreeDragDropEvent;
 import org.primefaces.model.DefaultTreeNode;
 import org.primefaces.model.TreeNode;
+import org.xml.sax.SAXException;
 
 public class StructurePanel implements Serializable {
     private static final Logger logger = LogManager.getLogger(StructurePanel.class);
@@ -199,8 +201,7 @@ public class StructurePanel implements Serializable {
         Collection<View> subViews = new ArrayList<>();
         getAllSubViews(selectedStructure, subViews);
 
-        List<View> multipleViews = subViews.stream().filter(v -> v.getPhysicalDivision().getLogicalDivisions().size() > 1)
-                .collect(Collectors.toList());
+        List<View> multipleViews = subViews.stream().filter(v -> v.getPhysicalDivision().getLogicalDivisions().size() > 1).toList();
         for (View view : multipleViews) {
             dataEditor.unassignView(selectedStructure, view, selectedStructure.getViews().getLast().equals(view));
             if (view.getPhysicalDivision().getLogicalDivisions().size() <= 1) {
@@ -273,14 +274,18 @@ public class StructurePanel implements Serializable {
      * Delete all currently selected physical divisons.
      */
     public void deleteSelectedPhysicalDivisions() {
-        if (Objects.isNull(selectedPhysicalNodes)) {
-            // there is nothing to do
-            return;
+        if (Objects.nonNull(selectedPhysicalNodes)) {
+            // iterate over selected tree nodes in physical tree
+            for (TreeNode selectedPhysicalNode : selectedPhysicalNodes) {
+                deleteSelectedPhysicalDivision(selectedPhysicalNode);
+            }
         }
-        for (TreeNode selectedPhysicalNode : selectedPhysicalNodes) {
-            deleteSelectedPhysicalDivision(selectedPhysicalNode);
+        if (Objects.nonNull(selectedLogicalNodes)) {
+            // iterate over selected tree nodes in logical tree
+            for (TreeNode selectedLogicalNode : selectedLogicalNodes) {
+                deleteSelectedPhysicalDivision(selectedLogicalNode);
+            }
         }
-
         int i = 1;
         for (PhysicalDivision physicalDivision : dataEditor.getWorkpiece().getAllPhysicalDivisionChildrenSortedFilteredByPageAndTrack()) {
             physicalDivision.setOrder(i);
@@ -320,9 +325,25 @@ public class StructurePanel implements Serializable {
     public TreeNode<Object> getSelectedLogicalNodeIfSingle() {
         List<TreeNode<Object>> nodes = getSelectedLogicalNodes();
         if (Objects.nonNull(nodes) && nodes.size() == 1) {
-            return nodes.get(0);
+            return nodes.getFirst();
         }
         return null;
+    }
+
+    /**
+     * Determines whether it is possible to select the assigned media of the currently selected logical node.
+     * This method checks if a single logical node is selected, verifies that it is of type "Structure",
+     * and ensures that it does not represent a linked process.
+     *
+     * @return {@code true} if the selected logical node is of type "Structure" and does not represent a linked process;
+     *         {@code false} otherwise.
+     */
+    public boolean canSelectAssignedMedia() {
+        TreeNode<Object> selectedLogicalNode = getSelectedLogicalNodeIfSingle();
+        if (Objects.isNull(selectedLogicalNode) || !(selectedLogicalNode.getData() instanceof StructureTreeNode structureTreeNode)) {
+            return false;
+        }
+        return STRUCTURE_NODE_TYPE.equals(selectedLogicalNode.getType()) && !structureTreeNode.isLinked();
     }
 
     /**
@@ -370,7 +391,7 @@ public class StructurePanel implements Serializable {
      */
     public void setSelectedLogicalNodes(List<TreeNode<Object>> selected) {
         if (Objects.nonNull(selected)) {
-            this.setSelectedLogicalNodesAsArray(selected.toArray(new TreeNode[selected.size()]));
+            this.setSelectedLogicalNodesAsArray(selected.toArray(new TreeNode[0]));
         }
     }
 
@@ -383,7 +404,7 @@ public class StructurePanel implements Serializable {
     public TreeNode<Object> getSelectedPhysicalNodeIfSingle() {
         List<TreeNode<Object>> nodes = getSelectedPhysicalNodes();
         if (Objects.nonNull(nodes) && nodes.size() == 1) {
-            return nodes.get(0);
+            return nodes.getFirst();
         }
         return null;
     }
@@ -432,7 +453,7 @@ public class StructurePanel implements Serializable {
      */
     public void setSelectedPhysicalNodes(List<TreeNode<Object>> selected) {
         if (Objects.nonNull(selected)) {
-            this.setSelectedPhysicalNodesAsArray(selected.toArray(new TreeNode[selected.size()]));
+            this.setSelectedPhysicalNodesAsArray(selected.toArray(new TreeNode[0]));
         }
     }
 
@@ -525,7 +546,7 @@ public class StructurePanel implements Serializable {
 
     private void preservePhysical() {
         if (!physicalTree.getChildren().isEmpty()) {
-            preservePhysicalRecursive(physicalTree.getChildren().get(0));
+            preservePhysicalRecursive(physicalTree.getChildren().getFirst());
             dataEditor.checkForChanges();
         }
     }
@@ -621,7 +642,7 @@ public class StructurePanel implements Serializable {
      *         the tree
      */
     private DefaultTreeNode<Object> buildStructureTree() {
-        DefaultTreeNode<Object> invisibleRootNode = new DefaultTreeNode<Object>();
+        DefaultTreeNode<Object> invisibleRootNode = new DefaultTreeNode<>();
         invisibleRootNode.setExpanded(true);
         invisibleRootNode.setType(STRUCTURE_NODE_TYPE);
         addParentLinksRecursive(dataEditor.getProcess(), invisibleRootNode);
@@ -711,7 +732,7 @@ public class StructurePanel implements Serializable {
          * appends it to the parent as a child. That’s the logic of the JSF
          * framework. So you do not have to add the result anywhere.
          */
-        DefaultTreeNode<Object> parent = new DefaultTreeNode<Object>(STRUCTURE_NODE_TYPE, node, result);
+        DefaultTreeNode<Object> parent = new DefaultTreeNode<>(STRUCTURE_NODE_TYPE, node, result);
         if (logicalNodeStateUnknown(this.previousExpansionStatesLogicalTree, parent)) {
             parent.setExpanded(true);
         }
@@ -874,8 +895,7 @@ public class StructurePanel implements Serializable {
      */
     private DefaultTreeNode<Object> addTreeNode(String label, boolean undefined, boolean linked, Object dataObject,
             DefaultTreeNode<Object> parent) {
-        DefaultTreeNode<Object> node = new DefaultTreeNode<Object>(new StructureTreeNode(label, null, undefined, linked, dataObject),
-                parent);
+        DefaultTreeNode<Object> node = new DefaultTreeNode<>(new StructureTreeNode(label, null, undefined, linked, dataObject), parent);
         if (dataObject instanceof PhysicalDivision && physicalNodeStateUnknown(this.previousExpansionStatesPhysicalTree, node)
                 || dataObject instanceof LogicalDivision
                 && logicalNodeStateUnknown(this.previousExpansionStatesLogicalTree, node)) {
@@ -933,13 +953,13 @@ public class StructurePanel implements Serializable {
                     }
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | SAXException | FileStructureValidationException e) {
             /*
              * Error case: The metadata file of the parent process cannot be
              * loaded. Show the process title of the parent process and the
              * warning sign.
              */
-            Helper.setErrorMessage("metadataReadError", e.getMessage(), logger, e);
+            Helper.setErrorMessage(Helper.getTranslation("metadataReadError", parent.getTitle()), e.getMessage(), logger, e);
             addTreeNode(parent.getTitle(), true, true, parent, tree).setType(STRUCTURE_NODE_TYPE);
         }
     }
@@ -954,7 +974,7 @@ public class StructurePanel implements Serializable {
      *         added as a result of calling `addParentLinksRecursive`.
      */
     public Integer getNumberOfParentLinkRootNodesAdded() {
-        DefaultTreeNode<Object> node = new DefaultTreeNode<Object>();
+        DefaultTreeNode<Object> node = new DefaultTreeNode<>();
         addParentLinksRecursive(dataEditor.getProcess(), node);
         return node.getChildCount();
     }
@@ -967,7 +987,7 @@ public class StructurePanel implements Serializable {
      * @return the media tree
      */
     private DefaultTreeNode<Object> buildMediaTree(PhysicalDivision mediaRoot) {
-        DefaultTreeNode<Object> rootTreeNode = new DefaultTreeNode<Object>();
+        DefaultTreeNode<Object> rootTreeNode = new DefaultTreeNode<>();
         rootTreeNode.setType(PHYS_STRUCTURE_NODE_TYPE);
         if (physicalNodeStateUnknown(this.previousExpansionStatesPhysicalTree, rootTreeNode)) {
             rootTreeNode.setExpanded(true);
@@ -1028,11 +1048,8 @@ public class StructurePanel implements Serializable {
 
     /**
      * Callback function triggered when a node is selected in the logical structure tree.
-     *
-     * @param event
-     *            NodeSelectEvent triggered by logical node being selected
      */
-    public void treeLogicalSelect(NodeSelectEvent event) {
+    public void treeLogicalSelect() {
         /*
          * The newly selected element has already been set in 'selectedLogicalNodes' by
          * JSF at this point.
@@ -1063,11 +1080,8 @@ public class StructurePanel implements Serializable {
 
     /**
      * Callback function triggered when a node is selected in the physical structure tree.
-     *
-     * @param event
-     *            NodeSelectEvent triggered by logical node being selected
      */
-    public void treePhysicalSelect(NodeSelectEvent event) {
+    public void treePhysicalSelect() {
         /*
          * The newly selected element has already been set in 'selectedPhysicalNode' by
          * JSF at this point.
@@ -1153,10 +1167,97 @@ public class StructurePanel implements Serializable {
             // select those tree nodes
             StructureTreeOperations.selectTreeNodes(selectedTreeNodes);
 
+            // workaround to store ID of linked parent process
+            TreeNode<Object> currentlySelectedLogicalNode = getSelectedLogicalNodeIfSingle();
+            if (selectedTreeNodes.isEmpty() && Objects.nonNull(currentlySelectedLogicalNode)
+                    && currentlySelectedLogicalNode.getData() instanceof StructureTreeNode) {
+                setLinkedParentProcessId(currentlySelectedLogicalNode);
+            }
+
             // remember new selection
             previouslySelectedLogicalNodes = getSelectedLogicalNodes();
             setSelectedLogicalNodes(new ArrayList<>(selectedTreeNodes));
         }
+    }
+
+    /**
+     * This method determines the ID of a linked parent process via it's label in the logical structure tree.
+     * Since the workpiece of a process does not contain a reference to potential parent processes (this relation
+     * is only stored in the database and "simulated" in the structure tree visible in the metadata editor), the
+     *
+     * @param logicalNode
+     *          TreeNode representing the linked parent process
+     */
+    private void setLinkedParentProcessId(TreeNode<Object> logicalNode) {
+        String nodeLabel = ((StructureTreeNode) logicalNode.getData()).getLabel();
+        if (nodeLabel.contains("[") && nodeLabel.indexOf("[") < nodeLabel.indexOf("]")) {
+            String idString = nodeLabel.substring(nodeLabel.indexOf("[") + 1, nodeLabel.indexOf("]"));
+            if (StringUtils.isNumeric(idString)) {
+                try {
+                    dataEditor.setLinkedProcessId(Integer.parseInt(idString));
+                } catch (NumberFormatException e) {
+                    logger.error(e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Checks whether conditions are met for displayed the menu option to edit metadata of a linked process.
+     * The conditions are:
+     * - exactly one tree node in the logical tree is selected and the tree node represents a linked process
+     * - no logical tree node is selected; this represents the case when a linked parent process is selected (the logical
+     *      nodes of these parent processes are not contained within the logical tree of the current process,
+     *      thus the selected logical node is null in this case)
+     * @return whether the option to edit metadata of a linked process is displayed or not
+     */
+    public boolean isMetadataEditingPossible() {
+        List<TreeNode<Object>> selectedNodes = getSelectedLogicalNodes();
+        if (selectedNodes.isEmpty()) {
+            // no logical node is selected; this represents selection of linked parent processes
+            return true;
+        } else if (selectedNodes.size() == 1) {
+            // exactly one logical node is selected; metadata can be edited if node represents "linked" process
+            TreeNode<Object> selectedNode = selectedNodes.getFirst();
+            if (selectedNode.getData() instanceof StructureTreeNode) {
+                return ((StructureTreeNode) selectedNode.getData()).isLinked();
+            } else {
+                return false;
+            }
+        } else {
+            // multiple logical tree nodes are selected
+            return false;
+        }
+    }
+
+    /**
+     * Checks whether conditions are met for displaying the context menu option to add a new structure element is
+     * displayed for the currently selected node(s) in the logical structure tree.
+     * The conditions are:
+     * - no media is selected
+     * - exactly one logical node is selected
+     * - the selected node does not already represent a linked process
+     * @return whether the option to add a new structure element is displayed
+     */
+    public boolean isAddingElementPossible() {
+        List<?> selectedMedia = dataEditor.getSelectedMedia();
+        TreeNode<?> selectedLogicalNode = getSelectedLogicalNodeIfSingle();
+        if (Objects.nonNull(selectedLogicalNode) && selectedMedia.isEmpty()) {
+            if (selectedLogicalNode.getData() instanceof StructureTreeNode structureTreeNode) {
+                return (!structureTreeNode.isLinked());
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks whether conditions are met for displaying the context menu option to link another process as a
+     * subordinate process.
+     *
+     * @return whether the option to link another process is displayed
+     **/
+    public boolean isLinkingProcessPossible() {
+        return ServiceManager.getDataEditorService().linkingProcessPossible(dataEditor, getSelectedLogicalNodeIfSingle());
     }
 
     /**
@@ -1368,8 +1469,7 @@ public class StructurePanel implements Serializable {
                            int insertionIndex) {
         int physicalInsertionIndex;
         List<PhysicalDivision> physicalDivisionsToBeMoved = elementsToBeMoved.stream()
-                .map(e -> e.getLeft().getPhysicalDivision())
-                .collect(Collectors.toList());
+                .map(e -> e.getLeft().getPhysicalDivision()).toList();
 
         if (insertionIndex > toElement.getViews().size()) {
             Helper.setErrorMessage("Unsupported drag'n'drop operation: Insertion index exceeds list.");
@@ -1507,7 +1607,7 @@ public class StructurePanel implements Serializable {
         List<View> views = elementsToBeMoved.stream()
                 .map(Pair::getKey)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                .toList();
         if (insertionIndex < 0 || insertionIndex == toElement.getViews().size()) {
             toElement.getViews().addAll(views);
         } else {
@@ -1660,7 +1760,7 @@ public class StructurePanel implements Serializable {
 
     private HashMap<LogicalDivision, Boolean> getLogicalTreeNodeExpansionStates(DefaultTreeNode<Object> tree) {
         if (Objects.nonNull(tree) && tree.getChildCount() == 1) {
-            TreeNode<Object> treeRoot = tree.getChildren().get(0);
+            TreeNode<Object> treeRoot = tree.getChildren().getFirst();
             LogicalDivision structuralElement = getTreeNodeStructuralElement(treeRoot);
             if (Objects.nonNull(structuralElement)) {
                 return getLogicalTreeNodeExpansionStatesRecursively(treeRoot, new HashMap<>());
@@ -1685,7 +1785,7 @@ public class StructurePanel implements Serializable {
 
     private HashMap<PhysicalDivision, Boolean> getPhysicalTreeNodeExpansionStates(DefaultTreeNode<Object> tree) {
         if (Objects.nonNull(tree) && tree.getChildCount() == 1) {
-            TreeNode<Object> treeRoot = tree.getChildren().get(0);
+            TreeNode<Object> treeRoot = tree.getChildren().getFirst();
             PhysicalDivision physicalDivision = getTreeNodePhysicalDivision(treeRoot);
             if (Objects.nonNull(physicalDivision)) {
                 return getPhysicalTreeNodeExpansionStatesRecursively(treeRoot, new HashMap<>());
@@ -1908,7 +2008,7 @@ public class StructurePanel implements Serializable {
 
                 // check sibling has children (with first child being another logical node)
                 while (!nextLogical.getChildren().isEmpty()) {
-                    TreeNode<Object> firstChild = nextLogical.getChildren().get(0);
+                    TreeNode<Object> firstChild = nextLogical.getChildren().getFirst();
                     if (Objects.isNull(getTreeNodeStructuralElement(firstChild))) {
                         // first child is not a logical node
                         return nextLogical;
@@ -1953,7 +2053,7 @@ public class StructurePanel implements Serializable {
         if (Objects.nonNull(nextLogical)) {
             // check whether first child is already view of current node (to avoid adding views multiple times)
             if (!nextLogical.getChildren().isEmpty()) {
-                TreeNode<Object> childNode = nextLogical.getChildren().get(0);
+                TreeNode<Object> childNode = nextLogical.getChildren().getFirst();
                 View childNodeView = getTreeNodeView(childNode);
                 View selectedView = getTreeNodeView(treeNode);
                 if (Objects.nonNull(childNodeView) && Objects.nonNull(selectedView)) {
