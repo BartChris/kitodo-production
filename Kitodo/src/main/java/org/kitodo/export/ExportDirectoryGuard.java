@@ -43,19 +43,11 @@ public class ExportDirectoryGuard {
     /**
      * Releases a previously acquired directory lock.
      *
-     * @param dir
-     *         the export directory associated with the lock
      * @param lock
      *         the lock instance previously returned by {@link #lock(URI)}
      */
-    public static void unlock(URI dir, ReentrantLock lock) {
-        try {
-            lock.unlock();
-        } finally {
-            if (!lock.isLocked()) {
-                LOCKS.remove(Paths.get(dir).toAbsolutePath().normalize().toString(), lock);
-            }
-        }
+    public static void unlock(ReentrantLock lock) {
+        lock.unlock();
     }
 
 }

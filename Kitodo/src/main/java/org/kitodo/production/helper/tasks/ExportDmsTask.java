@@ -12,18 +12,13 @@
 package org.kitodo.production.helper.tasks;
 
 import java.io.IOException;
-import java.util.Objects;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kitodo.data.database.beans.Process;
-import org.kitodo.data.database.beans.Task;
 import org.kitodo.data.database.exceptions.DAOException;
-import org.kitodo.export.ExportBatchState;
 import org.kitodo.exceptions.FileStructureValidationException;
 import org.kitodo.export.ExportDms;
-import org.kitodo.production.services.ServiceManager;
-import org.kitodo.production.services.workflow.WorkflowControllerService;
 import org.xml.sax.SAXException;
 
 /**
@@ -75,44 +70,14 @@ public class ExportDmsTask extends EmptyTask {
      */
     @Override
     public void run() {
-        boolean exportSuccessful;
+        boolean exportSuccessful = false;
         try {
-            exportSuccessful = exportDms.startExport(process, this);
-            Task workflowTask = exportDms.getWorkflowTask();
-            // close only the task of the original process and not of other processes (parent process, other child processes)
-            if (Objects.nonNull(workflowTask)
-                    && workflowTask.getProcess().getId().equals(process.getId())
-                    && exportSuccessful) {
-                setProgress(100);
-                new WorkflowControllerService().close(exportDms.getWorkflowTask());
-            }
+            exportSuccessful = exportDms.performExportForProcess(process, this);
         } catch (RuntimeException | DAOException | IOException | SAXException | FileStructureValidationException e) {
             setException(e);
             exportSuccessful = false;
         } finally {
-            ExportBatchState batch = exportDms.getBatchState();
-            if (Objects.nonNull(batch)) {
-                batch.finished(process);
-                Process parent = process.getParent();
-                if (Objects.nonNull(parent) && batch.isReady(parent) && batch.markStarted(parent)) {
-                    try {
-                        exportDms.startExport(parent);
-                    } catch (DAOException | RuntimeException e) {
-                        logger.error(
-                                "Failed to start parent export for process " + parent.getId(),
-                                e
-                        );
-                    }
-                }
-            }
-        }
-        try {
-            if (exportDms.isOptimisticExportFlagSet()) {
-                process.setExported(exportSuccessful);
-                ServiceManager.getProcessService().save(process);
-            }
-        } catch (DAOException e) {
-            logger.error(e.getMessage(), e);
+            exportDms.onSingleProcessFinished(process, exportSuccessful, this);
         }
     }
 

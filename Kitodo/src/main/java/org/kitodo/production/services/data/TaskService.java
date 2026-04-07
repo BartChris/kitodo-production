@@ -634,7 +634,7 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
      *          as Task object
      */
     public void executeDmsExport(Task task) throws DAOException, IOException {
-        ExportDms.exportProcesses(Collections.singletonList(task.getProcess()), task);
+        ExportDms.exportProcess(task.getProcess(), task);
     }
 
     /**

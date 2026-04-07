@@ -16,7 +16,6 @@ import com.itextpdf.text.DocumentException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -503,7 +502,7 @@ public class ProcessListBaseView extends BaseListView {
      */
     public void exportDMS(Process process) {
         try {
-            ExportDms.exportProcesses(Collections.singletonList(process), null);
+            ExportDms.exportProcess(process, null);
         } catch (DAOException e) {
             Helper.setErrorMessage(ERROR_EXPORTING,
                     new Object[] {ObjectType.PROCESS.getTranslationSingular(), process }, logger, e);
