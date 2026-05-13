@@ -23,16 +23,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kitodo.config.ConfigCore;
 import org.kitodo.config.enums.ParameterCore;
+import org.kitodo.data.database.beans.ImportConfiguration;
 import org.kitodo.data.database.beans.Process;
 import org.kitodo.data.database.enums.TaskStatus;
 import org.kitodo.data.database.exceptions.DAOException;
 import org.kitodo.data.database.persistence.TaskDAO;
 import org.kitodo.exceptions.FileStructureValidationException;
 import org.kitodo.export.ExportDms;
+import org.kitodo.production.enums.ExportFormat;
 import org.kitodo.production.enums.ObjectType;
 import org.kitodo.production.forms.BaseListView;
 import org.kitodo.production.forms.DeleteProcessDialog;
@@ -44,6 +47,7 @@ import org.kitodo.production.services.ServiceManager;
 import org.kitodo.production.services.data.ProcessService;
 import org.kitodo.production.services.export.MetsExportService;
 import org.kitodo.utils.Stopwatch;
+import org.omnifaces.util.Ajax;
 import org.primefaces.PrimeFaces;
 import org.primefaces.event.data.PageEvent;
 import org.xml.sax.SAXException;
@@ -51,7 +55,9 @@ import org.xml.sax.SAXException;
 public class ProcessListBaseView extends BaseListView {
 
     private static final Logger logger = LogManager.getLogger(ProcessListBaseView.class);
-    
+
+    private String errorMessage = "";
+
     protected List<Process> selectedProcesses = new ArrayList<>();
     private final String doneDirectoryName = ConfigCore.getParameterOrDefaultValue(ParameterCore.DONE_DIRECTORY_NAME);
     private DeleteProcessDialog deleteProcessDialog = new DeleteProcessDialog();
@@ -60,7 +66,7 @@ public class ProcessListBaseView extends BaseListView {
 
     boolean allSelected = false;
     HashSet<Integer> excludedProcessIds = new HashSet<>();
-    private final ProcessProgressHelper progressService = new ProcessProgressHelper();
+    private final ProcessProgressHelper processProgressHelper = new ProcessProgressHelper();
 
     /**
      * Constructor.
@@ -137,6 +143,13 @@ public class ProcessListBaseView extends BaseListView {
         return stopwatch.stop(selectedProcesses);
     }
 
+    private List<Integer> getSelectedProcessIds() {
+        return selectedProcesses.stream()
+                .map(Process::getId)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
     private LazyProcessModel getLazyProcessModel() {
         return (LazyProcessModel) this.lazyBeanModel;
     }
@@ -148,7 +161,7 @@ public class ProcessListBaseView extends BaseListView {
      * @return true if at least one task exists, otherwise false
      */
     public boolean hasAnyTasks(Process process) {
-        return progressService.hasAnyTasks(getCachedTaskStatusCounts(process));
+        return processProgressHelper.hasAnyTasks(getCachedTaskStatusCounts(process));
     }
 
     /**
@@ -180,7 +193,7 @@ public class ProcessListBaseView extends BaseListView {
      * @return formatted task titles or an empty string if none exist
      */
     public String getCurrentTaskTitles(Process process) {
-        return progressService.buildTaskTitleTooltip(
+        return processProgressHelper.buildTaskTitleTooltip(
                 getLazyProcessModel().getTaskTitleCache().get(process.getId())
         );
     }
@@ -217,7 +230,7 @@ public class ProcessListBaseView extends BaseListView {
      * @return progress percentage for the given status
      */
     public double progress(Process process, TaskStatus status) {
-        return progressService.progress(
+        return processProgressHelper.progress(
                 getCachedTaskStatusCounts(process),
                 status
         );
@@ -232,7 +245,7 @@ public class ProcessListBaseView extends BaseListView {
      * @return percentage of tasks completed
      */
     public double progressClosed(Process process) {
-        return progressService.progressClosed(getCachedTaskStatusCounts(process));
+        return processProgressHelper.progressClosed(getCachedTaskStatusCounts(process));
     }
 
     /**
@@ -244,7 +257,7 @@ public class ProcessListBaseView extends BaseListView {
      * @return percentage of tasks in progress
      */
     public double progressInProcessing(Process process) {
-        return progressService.progressInProcessing(
+        return processProgressHelper.progressInProcessing(
                 getCachedTaskStatusCounts(process)
         );
     }
@@ -259,7 +272,7 @@ public class ProcessListBaseView extends BaseListView {
      * @return percentage of startable tasks
      */
     public double progressOpen(Process process) {
-        return progressService.progressOpen(
+        return processProgressHelper.progressOpen(
                 getCachedTaskStatusCounts(process)
         );
     }
@@ -324,49 +337,65 @@ public class ProcessListBaseView extends BaseListView {
     }
 
     /**
-     * Generates the current search result as an Excel file.
+     * Generates and downloads the current search result as an Excel file using the active filter,
+     * visibility flags (closed/inactive), and selection state (all selected, selected IDs, excluded IDs).
      */
     public void generateExcel() {
         Stopwatch stopwatch = new Stopwatch(this, "generateExcel");
         try {
-            ServiceManager.getProcessService().generateExcel(
+            ServiceManager.getProcessService().export(
                     this.filter,
                     this.isShowClosedProcesses(),
-                    this.isShowInactiveProjects()
+                    this.isShowInactiveProjects(),
+                    ExportFormat.EXCEL,
+                    this.allSelected,
+                    getSelectedProcessIds(),
+                    this.excludedProcessIds
             );
         } catch (IOException | DocumentException e) {
-            Helper.setErrorMessage(ERROR_CREATING,
-                    new Object[] {Helper.getTranslation("resultSet")}, logger, e);
+            Helper.setErrorMessage(ERROR_CREATING, new Object[] {Helper.getTranslation("resultSet")}, logger, e);
         }
         stopwatch.stop();
     }
 
     /**
-     * Generates the current search result as a CSV file.
+     * Generates and downloads the current search result as a CSV file using the active filter,
+     * visibility flags (closed/inactive), and selection state (all selected, selected IDs, excluded IDs).
      */
     public void generateCsv() {
         Stopwatch stopwatch = new Stopwatch(this, "generateCsv");
         try {
-            ServiceManager.getProcessService().generateCsv(
+            ServiceManager.getProcessService().export(
                     this.filter,
                     this.isShowClosedProcesses(),
-                    this.isShowInactiveProjects()
+                    this.isShowInactiveProjects(),
+                    ExportFormat.CSV,
+                    this.allSelected,
+                    getSelectedProcessIds(),
+                    this.excludedProcessIds
             );
         } catch (IOException | DocumentException e) {
-            Helper.setErrorMessage(ERROR_CREATING,
-                    new Object[] {Helper.getTranslation("resultSet")}, logger, e);
+            Helper.setErrorMessage(ERROR_CREATING, new Object[] {Helper.getTranslation("resultSet")}, logger, e);
         }
         stopwatch.stop();
     }
 
     /**
-     * Generate result as PDF.
+     * Generates and downloads the current search result as a PDF file using the active filter,
+     * visibility flags (closed/inactive), and selection state (all selected, selected IDs, excluded IDs).
      */
     public void generateResultAsPdf() {
         Stopwatch stopwatch = new Stopwatch(this, "generateResultAsPdf");
         try {
-            ServiceManager.getProcessService().generatePdf(this.filter, this.isShowClosedProcesses(),
-                    this.isShowInactiveProjects());
+            ServiceManager.getProcessService().export(
+                    this.filter,
+                    this.isShowClosedProcesses(),
+                    this.isShowInactiveProjects(),
+                    ExportFormat.PDF,
+                    this.allSelected,
+                    getSelectedProcessIds(),
+                    this.excludedProcessIds
+            );
         } catch (IOException | DocumentException e) {
             Helper.setErrorMessage(ERROR_CREATING, new Object[] {Helper.getTranslation("resultPDF") }, logger, e);
         }
@@ -543,17 +572,27 @@ public class ProcessListBaseView extends BaseListView {
      */
     public void delete(Process process) {
         Stopwatch stopwatch = new Stopwatch(this.getClass(), process, "delete");
-        if (process.getChildren().isEmpty()) {
-            try {
-                ProcessService.deleteProcess(process.getId());
-            } catch (DAOException | IOException | SAXException | FileStructureValidationException e) {
-                Helper.setErrorMessage(ERROR_DELETING, new Object[] {ObjectType.PROCESS.getTranslationSingular() },
-                    logger, e);
+        try {
+            List<ImportConfiguration> configurations = ServiceManager.getImportConfigurationService()
+                    .getProcessTemplateConfigurationByProcessId(process.getId());
+            if (!configurations.isEmpty()) {
+                errorMessage = Helper.getTranslation("processUsedAsTemplateProcess", configurations.getFirst().getTitle());
+                Ajax.update("errorDialog");
+                PrimeFaces.current().executeScript("PF('errorDialog').show();");
+            } else if (process.getChildren().isEmpty()) {
+                try {
+                    ProcessService.deleteProcess(process.getId());
+                } catch (DAOException | IOException | SAXException | FileStructureValidationException e) {
+                    Helper.setErrorMessage(ERROR_DELETING, new Object[]{ObjectType.PROCESS.getTranslationSingular()}, logger, e);
+                }
             }
-        } else {
-            this.deleteProcessDialog = new DeleteProcessDialog();
-            this.deleteProcessDialog.setProcess(process);
-            PrimeFaces.current().executeScript("PF('deleteChildrenDialog').show();");
+            else {
+                this.deleteProcessDialog = new DeleteProcessDialog();
+                this.deleteProcessDialog.setProcess(process);
+                PrimeFaces.current().executeScript("PF('deleteChildrenDialog').show();");
+            }
+        } catch (DAOException e) {
+            Helper.setErrorMessage(ERROR_LOADING_MANY, new Object[]{ObjectType.IMPORT_CONFIGURATION.getTranslationSingular()}, logger, e);
         }
         stopwatch.stop();
     }
@@ -630,5 +669,28 @@ public class ProcessListBaseView extends BaseListView {
         stopwatch.stop();
     }
 
-    
+    /**
+     * Rename media files of all selected processes.
+     */
+    public void renameMedia() {
+        Stopwatch stopwatch = new Stopwatch(this, "renameMedia");
+        List<Process> processes = getSelectedProcesses();
+        errorMessage = ServiceManager.getFileService().tooManyProcessesSelectedForMediaRenaming(processes.size());
+        if (StringUtils.isBlank(errorMessage)) {
+            PrimeFaces.current().executeScript("PF('renameMediaConfirmDialog').show();");
+        } else {
+            Ajax.update("errorDialog");
+            PrimeFaces.current().executeScript("PF('errorDialog').show();");
+        }
+        stopwatch.stop();
+    }
+
+    /**
+     * Get error message.
+     * @return error message
+     */
+    public String getErrorMessage() {
+        Stopwatch stopwatch = new Stopwatch(this, "getErrorMessage");
+        return stopwatch.stop(errorMessage);
+    }
 }

@@ -34,6 +34,8 @@ import org.kitodo.selenium.testframework.pages.ProjectsPage;
 import org.kitodo.selenium.testframework.pages.TasksPage;
 import org.kitodo.selenium.testframework.pages.TemplateEditPage;
 import org.kitodo.selenium.testframework.pages.UsersPage;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
 
 public class ListingST extends BaseTestSelenium {
 
@@ -193,18 +195,15 @@ public class ListingST extends BaseTestSelenium {
         assertEquals(2, templatesProject.size(), "Displayed wrong number of project's templates");
         assertEquals("Fourth template", templatesProject.get(1), "Displayed wrong project's template");
 
-        int templatesInDatabase = (int) ServiceManager.getTemplateService().getAll().stream()
-                .filter(template -> template.getClient().getId() == 1)
-                .count();
-        int templatesDisplayed = projectsPage.countListedTemplates();
+        projectsPage.goToTemplateTab();
+        pollAssertTrue(() -> Browser.getDriver().findElement(By.id("templateTab")).isDisplayed());
 
         List<String> detailsTemplate =  projectsPage.getTemplateDetails();
-        //TODO: find way to read this table without exception
-        //assertEquals("Displayed wrong number of template's details", 4, detailsTemplate.size());
-        //assertEquals("Displayed wrong template's workflow", "", detailsTemplate.get(0));
-        //assertEquals("Displayed wrong template's ruleset", "SLUBHH", detailsTemplate.get(1));
-        //assertEquals("Displayed wrong template's docket", "second", detailsTemplate.get(2));
-        //assertEquals("Displayed wrong template's project", "First project", detailsTemplate.get(2));
+        assertEquals(4, detailsTemplate.size(), "Displayed wrong number of template's details");
+        assertEquals("second", detailsTemplate.get(0), "Displayed wrong template's docket");
+        assertEquals("SUBHH", detailsTemplate.get(1), "Displayed wrong template's ruleset");
+        assertEquals("", detailsTemplate.get(2), "Displayed wrong template's workflow");
+        assertEquals("First project", detailsTemplate.get(3), "Displayed wrong template's project");
 
     int workflowsInDatabase = (int) ServiceManager.getWorkflowService().getAll().stream()
         .filter(workflow -> workflow.getClient().getId() == 1)
@@ -270,5 +269,36 @@ public class ListingST extends BaseTestSelenium {
         projectsPage.goToTemplateTab();
         projectsPage.toggleHiddenTemplates();
         assertEquals(2, projectsPage.getTemplateTitles().size(), "Wrong number of templates after toggling hidden templates");
+    }
+
+    /**
+     * Verify that all details are shown on the 'current task' page.
+     *
+     * @throws Exception when thread is interrupted or tasks cannot be loaded.
+     */
+    @Test
+    public void listCurrentTaskDetailsTest() throws Exception {
+        tasksPage.goTo().takeOpenTask("Open", "First process");
+        pollAssertTrue(() -> Browser.getDriver().findElement(By.id("tasksTabView")).isDisplayed());
+
+        // first check table headers
+        List<WebElement> taskDetailHeaders = Browser.getDriver().findElements(By.cssSelector("#tasksTabView\\:taskDetails_head th"));
+        assertEquals(6, taskDetailHeaders.size(), "Wrong number of task details headers");
+        assertEquals("Titel", taskDetailHeaders.get(0).getText(), "Wrong first task details header");
+        assertEquals("Vorgangstitel", taskDetailHeaders.get(1).getText(), "Wrong second task details header");
+        assertEquals("Vorgangs-ID", taskDetailHeaders.get(2).getText(), "Wrong third task details header");
+        assertEquals("Reihenfolge", taskDetailHeaders.get(3).getText(), "Wrong fourth task details header");
+        assertEquals("Korrektur", taskDetailHeaders.get(4).getText(), "Wrong fifth task details header");
+        assertEquals("Status", taskDetailHeaders.get(5).getText(), "Wrong sixth task details header");
+
+        // then check table contents
+        List<WebElement> taskDetails = Browser.getDriver().findElements(By.cssSelector("#tasksTabView\\:taskDetails td[role='gridcell']"));
+        assertEquals(6, taskDetails.size(), "Wrong number of task details");
+        assertEquals("Open", taskDetails.get(0).getText(), "Wrong task title");
+        assertEquals("First process", taskDetails.get(1).getText(), "Wrong process title");
+        assertEquals("1", taskDetails.get(2).getText(), "Wrong process ID");
+        assertEquals("4", taskDetails.get(3).getText(), "Wrong task order");
+        assertEquals("", taskDetails.get(4).getText(), "Wrong task correction status");
+        assertEquals("In Bearbeitung", taskDetails.get(5).getText(), "Wrong task status");
     }
 }

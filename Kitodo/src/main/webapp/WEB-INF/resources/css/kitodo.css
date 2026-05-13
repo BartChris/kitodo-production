@@ -788,6 +788,7 @@ body .content-header > .ui-panel-content {
 
 .content-header .ui-panel-content > form,
 .content-header .ui-panel-content > button,
+#massImportButtonForm > button,
 .ui-menubutton,
 .ui-selectbooleanbutton {
     white-space: nowrap;
@@ -923,6 +924,7 @@ body #filterInputForm\:filterfield {
 #filterOptionsFormWrapper {
     box-shadow: var(--second-level-shadow);
     display: none;
+    padding-bottom: var(--default-half-size);
     position: absolute;
     top: 100%;
     z-index: 1;
@@ -939,7 +941,7 @@ body #filterInputForm\:filterfield {
 
 #filterOptionsForm\:suggestions  {
     border-bottom: solid var(--contrast-border-width) var(--medium-gray);
-    margin-bottom: var(--default-full-size);
+    margin-bottom: var(--default-half-size);
     max-height: calc(100vh - 350px);
     overflow-x: auto;
 }
@@ -948,23 +950,25 @@ body #filterInputForm\:filterfield {
     background: var(--cloudy-gray);
 }
 
+#filterOptionsForm\:suggestions_content {
+    padding: 0;
+}
+
 #filterOptionsFormWrapper .ui-chkbox,
 #filterOptionsForm\:suggestions li {
-    line-height: var(--input-height);
+    line-height: var(--default-double-size);
     padding: 0 var(--default-half-size) 0 var(--default-double-size);
 }
 
-#filterOptionsFormWrapper .ui-chkbox {
-    padding-bottom: var(--input-padding);
-}
-
-body #filterOptionsFormWrapper .ui-chkbox.switch .ui-chkbox-icon {
+body #filterOptionsFormWrapper .ui-chkbox.switch .ui-chkbox-icon,
+body #filterOptionsFormWrapper .ui-selectmanycheckbox.switch .ui-chkbox-icon {
     transform: translate(-55%, -105%);
 }
 
 #filterOptionsForm\:taskFilters,
 #filterOptionsForm\:taskStatus {
     border: none;
+    display: table;
     padding: 0;
     width: 100%;
 }
@@ -1394,6 +1398,8 @@ body .statusColumn .ui-button {
 #configureColumnsForm .configure-columns-button .ui-selectcheckboxmenu-label::after {
     font-family: 'FontAwesome';
     content: '\f0db';
+    display: inline;
+    visibility: visible;
 }
 
 #configureColumnsForm.ui-selectcheckboxmenu-panel .ui-selectcheckboxmenu-header,
@@ -1921,9 +1927,30 @@ body .functional-metadata-wrapper .help-button .ui-button-text {
     float: unset;
 }
 
-#fileUploadForm .ui-fileupload .ui-fileupload-content,
-#fileUploadForm .ui-fileupload .ui-fileupload-content .ui-fileupload-files {
+#fileUploadForm\:uploadWrapper {
+    margin: 0;
+}
+
+#fileUploadForm\:uploadWrapper_content {
+    padding: 0;
+}
+
+#fileUploadForm .ui-fileupload .ui-fileupload-content {
     border: none;
+}
+
+#fileUploadForm .ui-fileupload .ui-fileupload-content .ui-fileupload-files .ui-fileupload-row {
+    border: 0 1px solid var(--focused-blue);
+}
+
+#fileUploadForm .ui-fileupload .ui-fileupload-content .ui-fileupload-files .ui-fileupload-row:first-child {
+    border-top: 1px solid var(--focused-blue);
+    border-top-radius: var(--default-border-radius);
+}
+
+#fileUploadForm .ui-fileupload .ui-fileupload-content .ui-fileupload-files .ui-fileupload-row:last-child {
+    border-bottom: 1px solid var(--focused-blue);
+    border-bottom-radius: var(--default-border-radius);
 }
 
 
@@ -1931,124 +1958,146 @@ body .functional-metadata-wrapper .help-button .ui-button-text {
 Mass import
 ----------------------------------------------------------------------*/
 
-#editForm\:fileUploadButtonWrapper {
+#massImportTab,
+#recordsForm\:recordsTableWrapper {
+    height: 100%;
+}
+
+#massImportTab #fileUploadForm {
+    height: 160px;
+    overflow-y: auto;
+}
+
+#massImportTab #recordsForm {
+    height: calc(100% - 160px);
+    overflow-y: hidden;
+}
+
+#massImportTab #recordsForm\:recordsTable {
+    height: calc(100% - 80px);
+}
+
+#massImportTab .ui-datatable-scrollable-body {
+    height: calc(100% - 50px);
+}
+
+#fileUploadForm\:fileUploadButtonWrapper {
     padding: 0;
 }
 
-#editForm\:recordsTable th span.metadata-record-id::after,
-#editForm\:recordsTable th span.metadata-doctype::after {
+#recordsForm\:recordsTable th span.metadata-record-id::after,
+#recordsForm\:recordsTable th span.metadata-doctype::after {
     color: var(--medium-gray);
     font-family: FontAwesome;
     margin-left: var(--default-half-size);
 }
 
-#editForm\:recordsTable th span.metadata-record-id::after {
+#recordsForm\:recordsTable th span.metadata-record-id::after {
     content: "\f2c2";
 }
 
-#editForm\:recordsTable th span.metadata-doctype::after {
+#recordsForm\:recordsTable th span.metadata-doctype::after {
     content: "\f02d";
 }
 
-#editForm\:recordsTable .ui-datatable-scrollable-theadclone {
+#recordsForm\:recordsTable .ui-datatable-scrollable-theadclone {
     display: none;
 }
 
-#editForm\:recordsTable_scrollableThead > tr > th:last-child span {
+#recordsForm\:recordsTable_scrollableThead > tr > th:last-child span {
     float: right;
 }
 
-#editForm\:recordsTable th.ui-state-default,
-#editForm\:recordsTable td.ui-editable-column,
-#editForm\:recordsTable td.remove-column,
-#editForm\:recordsTable tr.ui-datatable-empty-message {
+#recordsForm\:recordsTable th.ui-state-default,
+#recordsForm\:recordsTable td.ui-editable-column,
+#recordsForm\:recordsTable td.remove-column,
+#recordsForm\:recordsTable tr.ui-datatable-empty-message {
     border: 1px solid var(--carbon-blue);
 }
 
-#editForm\:addCsvRecord,
-#editForm\:catalogSelectionWrapper {
+#recordsForm\:addCsvRecord,
+#fileUploadForm\:catalogSelectionWrapper {
     margin-top: var(--default-half-size);
 }
 
-#editForm\:recordsTable th:has(> span.ui-column-title > span.invalid-configuration) {
+#recordsForm\:recordsTable th:has(> span.ui-column-title > span.invalid-configuration) {
     background-color: var(--orange);
 }
 
-#editForm\:recordsTable th:has(> span.ui-column-title > span.unknown-metadata) {
+#recordsForm\:recordsTable th:has(> span.ui-column-title > span.unknown-metadata) {
     background-color: var(--light-orange);
 }
 
-#editForm\:recordsTable td.ui-editable-column {
+#recordsForm\:recordsTable td.ui-editable-column {
     overflow-x: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-#editForm .ui-panelgrid-cell {
+#fileUploadForm .ui-panelgrid-cell {
     padding-left: var(--default-full-size);
 }
 
-#editForm .ui-fileupload-buttonbar {
+#fileUploadForm .ui-fileupload-buttonbar {
     padding: 0;
 }
 
-#editForm .ui-fileupload-buttonbar .ui-button {
+#fileUploadForm .ui-fileupload-buttonbar .ui-button {
     margin-right: var(--default-full-size);
 }
 
-#editForm\:fileUploadButtonWrapper .ui-fileupload-files:not(:has(div.ui-fileupload-row)) {
+#fileUploadForm\:fileUploadButtonWrapper .ui-fileupload-files:not(:has(div.ui-fileupload-row)) {
     border: none;
 }
 
-#editForm\:recordsTableWrapper {
+#recordsForm\:recordsTableWrapper {
     padding: 0 var(--default-full-size);
 }
 
-#editForm\:recordsTable tr {
+#recordsForm\:recordsTable tr {
     height: var(--input-height);
     overflow-y: hidden;
 }
 
-#editForm\:recordsTable .remove-column {
+#recordsForm\:recordsTable .remove-column {
     width: 50px;
 }
 
-#editForm\:recordsTable .remove-column button.secondary,
-#editForm\:recordsTable .remove-metadata-column {
+#recordsForm\:recordsTable .remove-column button.secondary,
+#recordsForm\:recordsTable .remove-metadata-column {
     border: none;
 }
 
-#editForm\:addCsvRecord,
-#editForm\:recordsTable .remove-column button.secondary {
+#recordsForm\:addCsvRecord,
+#recordsForm\:recordsTable .remove-column button.secondary {
     float: right;
 }
 
-#editForm\:recordsTable input.ui-inputtext {
+#recordsForm\:recordsTable input.ui-inputtext {
     width: 100%;
 }
 
-#editForm\:csvSeparator {
+#fileUploadForm\:csvSeparator {
     display: block;
     width: 60px;
 }
 
-#editForm\:separatorCharacterWrapper .separator-selection {
+#fileUploadForm\:separatorCharacterWrapper .separator-selection {
     display: inline-block;
     margin-right: var(--default-double-size);
-    width: 45%;
 }
 
-#editForm\:skipEmptyColumnsWrapper {
+#fileUploadForm\:skipEmptyColumnsWrapper {
     display: inline-block;
     vertical-align: top;
 }
 
-#editForm\:csvFileUpload {
+#fileUploadForm\:csvFileUpload {
     overflow-x: hidden;
     white-space: nowrap;
 }
 
-#editForm\:csvFileUpload .ui-fileupload-buttonbar {
+#fileUploadForm\:csvFileUpload .ui-fileupload-buttonbar {
     background: transparent;
     border: none;
 }
@@ -2062,18 +2111,18 @@ Mass import
     padding: 0;
 }
 
-#editForm\:recordsTable\:addMetadataColumn,
-#editForm\:recordsTable button.remove-metadata-column {
+#recordsForm\:recordsTable\:addMetadataColumn,
+#recordsForm\:recordsTable button.remove-metadata-column {
     background: transparent;
     overflow: hidden;
     height: inherit;
 }
 
-#editForm\:recordsTable span.ui-column-title {
+#recordsForm\:recordsTable span.ui-column-title {
     white-space: nowrap;
 }
 
-#editForm\:recordsTable span.ui-column-title span {
+#recordsForm\:recordsTable span.ui-column-title span {
     display: inline-block;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2081,7 +2130,7 @@ Mass import
     width: calc(100% - 20px);
 }
 
-#editForm\:recordsTable_data tr td {
+#recordsForm\:recordsTable_data tr td {
     box-sizing: content-box;
 }
 
@@ -2093,8 +2142,12 @@ Mass import
     padding-right: var(--default-half-size);
 }
 
-#fileUploadForm, #searchEditForm {
+#searchEditForm {
     padding: 0 var(--default-double-size);
+}
+
+#fileUploadForm\:csvParserOptions_content {
+    padding: 0;
 }
 
 #catalogSearchForm div.ui-panelgrid-cell {
@@ -2646,6 +2699,17 @@ form#metadata div label,
     overflow-y: scroll;
 }
 
+#dialogAddDocStrucTypeForm .ui-inputtext,
+#dialogAddDocStrucTypeForm .ui-selectonemenu,
+#dialogAddDocStrucTypeForm .ui-spinner {
+    width: calc(100% - var(--default-full-size));
+}
+
+#dialogAddDocStrucTypeForm\:elementsToAddSpinner {
+    margin-bottom: var(--default-full-size);
+}
+
+
 #ltpValidationReportDialog {
     top: 50px;
 }
@@ -2760,6 +2824,10 @@ form#metadata div label,
 
 #editFolderDialog .dialogFieldWrapper td {
     vertical-align: top;
+}
+
+#editFolderDialog .ui-panelgrid-cell:not(.half-width) {
+    width: 100%;
 }
 
 #uploadFileDialog {
@@ -3550,6 +3618,11 @@ button.settings-loaded-task::after {
     display: block;
 }
 
+#metadataAccordion\:logicalMetadataHeader .ui-panelgrid-content .ui-panelgrid-cell {
+    padding: 0;
+    width: auto;
+}
+
 #metadataAccordion.separateStructure > .ui-accordion-content {
     height: calc(100% - 2 * var(--input-height));
 }
@@ -3680,10 +3753,6 @@ button.settings-loaded-task::after {
     margin-left: var(--default-half-size);
 }
 
-#metadataAccordion\:metadata\:metadataTable_data .ui-selectoneradio {
-    display: inline-table;
-}
-
 #metadataAccordion\:metadata\:metadataTable_data .ui-selectoneradio td {
     padding: var(--input-padding-none) var(--input-padding);
 }
@@ -3748,6 +3817,7 @@ div[id$='metadataTable'].ui-treetable tr.focusedRow {
 
 #imagePreviewForm\:imageControlPanel .ui-panelgrid-cell {
     background: transparent;
+    display: contents;
     padding: 0;
 }
 
@@ -4817,6 +4887,14 @@ body .ui-selectonemenu .ui-selectonemenu-trigger .ui-icon::before {
 #editForm\:importConfigurationTabView\:detailsTab .cell-dummy {
     height: 54px;
     padding: 0;
+}
+
+#editForm\:searchTabView\:processSearch-grid .ui-g > .ui-panelgrid-cell:first-child {
+    width: 200px;
+}
+
+#editForm\:searchTabView\:processSearch-grid .ui-g > .ui-panelgrid-cell:not(:first-child) {
+    width: auto;
 }
 
 .help-button {
