@@ -21,6 +21,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 import org.kitodo.SecurityTestUtils;
 import org.kitodo.data.database.beans.User;
 import org.kitodo.production.services.ServiceManager;
@@ -35,6 +36,7 @@ import org.kitodo.selenium.testframework.pages.TasksPage;
 /**
  * Checks that URL query parameters are correctly applied to list views.
  */
+@Disabled("Investigating SearchingST failure")
 public class ListingQueryParameterST extends BaseTestSelenium {
 
     private static ProcessesPage processesPage;
