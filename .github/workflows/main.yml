@@ -26,6 +26,18 @@ jobs:
           sudo sh -c 'echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
           sudo apt-get update
           sudo apt-get --only-upgrade install google-chrome-stable
+          
+
+      - name: browser diagnostics
+        run: |
+          echo "Chrome:"
+          google-chrome --version || true
+          
+          echo "Chromedriver:"
+          chromedriver --version || true
+        
+          echo "Location:"
+          which chromedriver || true
 
       - name: install imagemagick (convert command required by kitodo-image-management)
         run: |
