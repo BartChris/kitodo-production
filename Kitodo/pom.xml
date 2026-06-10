@@ -663,7 +663,7 @@
                                 <exclude>**/*Test.java</exclude>
                             </excludes>
                             <includes>
-                                <include>**/SearchingST.java</include>
+                                <include>**/*ST.java</include>
                             </includes>
                         </configuration>
 
