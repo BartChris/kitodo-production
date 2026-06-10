@@ -24,10 +24,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kitodo.selenium.testframework.Browser;
 import org.kitodo.selenium.testframework.Pages;
-import org.openqa.selenium.By;
-import org.openqa.selenium.NotFoundException;
-import org.openqa.selenium.TimeoutException;
-import org.openqa.selenium.WebElement;
+import org.openqa.selenium.*;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -285,6 +282,7 @@ public abstract class Page<T> {
     public void searchInSearchField(String query) throws Exception {
         searchField.clear();
         searchField.sendKeys(query);
-        clickButtonAndWaitForRedirect(searchButton, Pages.getProcessesPage().getUrl());
+        searchField.sendKeys(Keys.ENTER);
+        //clickButtonAndWaitForRedirect(searchButton, Pages.getProcessesPage().getUrl());
     }
 }
