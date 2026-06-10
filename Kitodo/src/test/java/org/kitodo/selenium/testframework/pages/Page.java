@@ -24,10 +24,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kitodo.selenium.testframework.Browser;
 import org.kitodo.selenium.testframework.Pages;
-import org.openqa.selenium.By;
-import org.openqa.selenium.NotFoundException;
-import org.openqa.selenium.TimeoutException;
-import org.openqa.selenium.WebElement;
+import org.openqa.selenium.*;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -305,7 +302,7 @@ public abstract class Page<T> {
                 searchButton.isDisplayed()
         );
 
-        searchButton.click();
+        searchField.sendKeys(Keys.ENTER);
 
         logger.error(
                 "SEARCH CLICKED query='{}' currentUrl='{}'",
