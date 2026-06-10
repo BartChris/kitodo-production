@@ -20,6 +20,16 @@ jobs:
     runs-on: ubuntu-24.04
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+      - name: browser diagnostics before changes
+        run: |
+         echo "Chrome:"
+         google-chrome --version || true
+  
+         echo "Chromedriver:"
+         chromedriver --version || true
+  
+         echo "Location:"
+         which chromedriver || true
       - name: install imagemagick (convert command required by kitodo-image-management)
         run: |
           sudo apt-get update
