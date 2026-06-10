@@ -285,7 +285,18 @@ public abstract class Page<T> {
     public void searchInSearchField(String query) throws Exception {
         searchField.clear();
         searchField.sendKeys(query);
+
+        logger.error(
+                "FIELD VALUE = " + searchField.getAttribute("value")
+        );
+
         Thread.sleep(3000);
-        //clickButtonAndWaitForRedirect(searchButton, Pages.getProcessesPage().getUrl());
+
+        searchButton.click();
+
+        logger.error(
+                "URL AFTER CLICK = " + Browser.getCurrentUrl()
+        );
     }
+
 }
