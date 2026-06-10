@@ -69,8 +69,7 @@ public class SearchingST extends BaseTestSelenium {
 
     @Test
     public void searchForProcesses() throws Exception {
-        processesPage.goTo();
-        processesPage.searchInSearchField("process");
+        desktopPage.searchInSearchField("process");
         int numberOfResults = processesPage.getProcessIds().size();
         assertEquals(2, numberOfResults, "There should be two processes found");
 

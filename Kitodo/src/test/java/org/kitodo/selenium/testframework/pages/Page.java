@@ -283,8 +283,34 @@ public abstract class Page<T> {
      * @throws Exception if Page could not be instantiated.
      */
     public void searchInSearchField(String query) throws Exception {
+
+        logger.error(
+                "SEARCH REQUEST query='{}' currentUrl='{}'",
+                query,
+                Browser.getCurrentUrl()
+        );
+
         searchField.clear();
         searchField.sendKeys(query);
-        clickButtonAndWaitForRedirect(searchButton, Pages.getProcessesPage().getUrl());
+
+        logger.error(
+                "SEARCH FIELD AFTER SENDKEYS query='{}' fieldValue='{}'",
+                query,
+                searchField.getAttribute("value")
+        );
+
+        logger.error(
+                "SEARCH BUTTON enabled={} displayed={}",
+                searchButton.isEnabled(),
+                searchButton.isDisplayed()
+        );
+
+        searchButton.click();
+
+        logger.error(
+                "SEARCH CLICKED query='{}' currentUrl='{}'",
+                query,
+                Browser.getCurrentUrl()
+        );
     }
 }
