@@ -17,11 +17,16 @@ import java.text.MessageFormat;
 import jakarta.enterprise.context.SessionScoped;
 import jakarta.inject.Named;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 @Named("SearchResultForm")
 @SessionScoped
 public class SearchResultForm implements Serializable {
 
     private String searchQuery;
+    private static final Logger logger =
+            LogManager.getLogger(SearchResultForm.class);
 
     private static final String REDIRECT_PATH = "/pages/{0}.xhtml?faces-redirect=true";
 
@@ -31,7 +36,20 @@ public class SearchResultForm implements Serializable {
      * @return The redirect URL to the processes page with input parameter.
      */
     public String searchForProcessesBySearchQuery() {
-        return MessageFormat.format(REDIRECT_PATH, "processes") + "&input=" + searchQuery;
+
+        String redirect =
+                MessageFormat.format(
+                        REDIRECT_PATH,
+                        "processes"
+                ) + "&input=" + searchQuery;
+
+        logger.error(
+                "SEARCH ACTION CALLED query='{}' redirect='{}'",
+                searchQuery,
+                redirect
+        );
+
+        return redirect;
     }
 
     public String getSearchQuery() {

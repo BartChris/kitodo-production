@@ -287,7 +287,10 @@ public abstract class Page<T> {
         searchField.sendKeys(query);
 
         logger.error(
-                "FIELD VALUE = " + searchField.getAttribute("value")
+                "SEARCH REQUEST query='{}' fieldValue='{}' currentUrl='{}'",
+                query,
+                searchField.getAttribute("value"),
+                Browser.getCurrentUrl()
         );
 
         Thread.sleep(3000);
@@ -295,7 +298,8 @@ public abstract class Page<T> {
         searchButton.click();
 
         logger.error(
-                "URL AFTER CLICK = " + Browser.getCurrentUrl()
+                "URL AFTER CLICK = {}",
+                Browser.getCurrentUrl()
         );
     }
 
