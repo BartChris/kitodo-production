@@ -501,6 +501,38 @@ public class GalleryPanel {
         updateMedia();
         stripes = new ArrayList<>();
         addStripesRecursive(dataEditor.getWorkpiece().getLogicalStructure());
+
+        GalleryStripe unstructuredStripe = stripes.getFirst();
+
+        for (GalleryMediaContent media : unstructuredStripe.getMedias()) {
+            PhysicalDivision physicalDivision = media.getView().getPhysicalDivision();
+
+            media.setSelectedInUnstructuredStripe(
+                dataEditor.isSelected(
+                    physicalDivision,
+                    unstructuredStripe.getStructure()));
+
+            media.setLastSelectionInUnstructuredStripe(
+                isLastSelection(media, unstructuredStripe));
+        }
+
+        for (GalleryStripe stripe : stripes) {
+            for (GalleryMediaContent media : stripe.getMedias()) {
+
+                media.setNormalOverlayText(media.getOrderlabel());
+
+                media.setAssignmentIndex(
+                    media.isAssignedSeveralTimes()
+                        ? getSeveralAssignmentsIndex(media) + 1
+                        : 0);
+
+                media.setShowPhysicalPageNumber(true);
+                media.setPhysicalPageNumber(media.getOrder());
+
+                media.setShowLogicalPageNumber(true);
+                media.setLogicalPageNumber(media.getOrderlabel());
+            }
+        }
     }
 
     private static MediaVariant getMediaVariant(Folder folderSettings, List<PhysicalDivision> physicalDivisions) {

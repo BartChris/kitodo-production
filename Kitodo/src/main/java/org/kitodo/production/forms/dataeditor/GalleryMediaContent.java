@@ -82,6 +82,10 @@ public class GalleryMediaContent {
      */
     private String logicalTreeNodeId;
 
+    private boolean selectedInUnstructuredStripe;
+
+    private boolean lastSelectionInUnstructuredStripe;
+
     /**
      * Creates a new gallery media content.
      *
@@ -102,6 +106,95 @@ public class GalleryMediaContent {
         this.mediaViewMimeType = mediaViewMimeType;
         this.mediaViewUri = mediaViewUri;
         this.logicalTreeNodeId = logicalTreeNodeId;
+    }
+
+    private boolean showLogicalPageNumber;
+    private String logicalPageNumber;
+
+    public boolean isShowLogicalPageNumber() {
+        return showLogicalPageNumber;
+    }
+
+    public void setShowLogicalPageNumber(boolean showLogicalPageNumber) {
+        this.showLogicalPageNumber = showLogicalPageNumber;
+    }
+
+    public String getLogicalPageNumber() {
+        return logicalPageNumber;
+    }
+
+    public void setLogicalPageNumber(String logicalPageNumber) {
+        this.logicalPageNumber = logicalPageNumber;
+    }
+
+    private boolean showPhysicalPageNumber;
+    private String physicalPageNumber;
+
+    public boolean isShowPhysicalPageNumber() {
+        return showPhysicalPageNumber;
+    }
+
+    public void setShowPhysicalPageNumber(boolean showPhysicalPageNumber) {
+        this.showPhysicalPageNumber = showPhysicalPageNumber;
+    }
+
+    public String getPhysicalPageNumber() {
+        return physicalPageNumber;
+    }
+
+    public void setPhysicalPageNumber(String physicalPageNumber) {
+        this.physicalPageNumber = physicalPageNumber;
+    }
+
+    private int assignmentIndex;
+
+    public int getAssignmentIndex() {
+        return assignmentIndex;
+    }
+
+    public void setAssignmentIndex(int assignmentIndex) {
+        this.assignmentIndex = assignmentIndex;
+    }
+
+    public boolean isShowAssignmentIndex() {
+        return assignmentIndex > 0;
+    }
+
+    private String overlayText;
+
+    public String getOverlayText() {
+        return overlayText;
+    }
+
+    private String normalOverlayText;
+
+    public String getNormalOverlayText() {
+        return normalOverlayText;
+    }
+
+
+    public void setNormalOverlayText(String normalOverlayText) {
+        this.normalOverlayText = normalOverlayText;
+    }
+
+    public void setOverlayText(String overlayText) {
+        this.overlayText = overlayText;
+    }
+
+    public boolean isSelectedInUnstructuredStripe() {
+        return selectedInUnstructuredStripe;
+    }
+
+    public void setSelectedInUnstructuredStripe(boolean selectedInUnstructuredStripe) {
+        this.selectedInUnstructuredStripe = selectedInUnstructuredStripe;
+    }
+
+    public boolean isLastSelectionInUnstructuredStripe() {
+        return lastSelectionInUnstructuredStripe;
+    }
+
+    public void setLastSelectionInUnstructuredStripe(boolean lastSelectionInUnstructuredStripe) {
+        this.lastSelectionInUnstructuredStripe = lastSelectionInUnstructuredStripe;
     }
 
     /**
