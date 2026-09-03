@@ -12,6 +12,8 @@
 package org.kitodo.production.forms.dataeditor;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -55,6 +57,13 @@ import org.kitodo.production.services.dataeditor.DataEditorService;
 import org.kitodo.production.services.file.FileService;
 import org.kitodo.utils.MediaUtil;
 import org.primefaces.PrimeFaces;
+
+import jakarta.el.ValueExpression;
+import jakarta.faces.component.UIComponent;
+import jakarta.faces.context.FacesContext;
+
+import org.primefaces.util.DynamicContentSrcBuilder;
+import org.primefaces.util.Lazy;
 
 /**
  * Backing bean for the gallery panel of the metadata editor.
@@ -133,6 +142,75 @@ public class GalleryPanel {
      */
     public String getGalleryViewMode() {
         return galleryViewMode.toString().toLowerCase();
+    }
+
+    private static final String PREVIEW_BASE_URL_KEY =
+        GalleryPanel.class.getName() + ".previewBaseUrl";
+
+    public String getPreviewUrl(UIComponent component, GalleryMediaContent media,
+                                int processId, String sessionId) {
+
+        FacesContext context = FacesContext.getCurrentInstance();
+
+        Map<Object, Object> attributes = context.getAttributes();
+
+        String baseUrl = (String) attributes.get(PREVIEW_BASE_URL_KEY);
+
+        if (baseUrl == null) {
+            ValueExpression valueExpression = context.getApplication()
+                .getExpressionFactory()
+                .createValueExpression(
+                    context.getELContext(),
+                    "#{mediaProvider.previewData}",
+                    Object.class);
+
+            Lazy<Object> value = new Lazy<>(
+                () -> valueExpression.getValue(context.getELContext()));
+
+            baseUrl = DynamicContentSrcBuilder.build(
+                context,
+                component,
+                valueExpression,
+                value,
+                true,
+                true);
+
+            attributes.put(PREVIEW_BASE_URL_KEY, baseUrl);
+        }
+
+        return appendParameter(
+            appendParameter(
+                appendParameter(baseUrl, "mediaId", media.getId()),
+                "process", Integer.toString(processId)),
+            "sessionId", sessionId);
+    }
+
+    public String preparePreviewUrls(
+        UIComponent component,
+        int processId,
+        String sessionId) {
+
+        String baseUrl = getPreviewBaseUrl(component);
+
+        for (GalleryMediaContent media : medias) {
+            String url = appendParameter(baseUrl, "mediaId", media.getId());
+            url = appendParameter(url, "process", Integer.toString(processId));
+            url = appendParameter(url, "sessionId", sessionId);
+
+            media.setPreviewUrl(url);
+        }
+
+        return "";
+    }
+
+    private String appendParameter(String url, String name, String value) {
+        String separator = url.contains("?") ? "&" : "?";
+
+        return url
+            + separator
+            + URLEncoder.encode(name, StandardCharsets.UTF_8)
+            + "="
+            + URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     /**
@@ -489,6 +567,39 @@ public class GalleryPanel {
             medias.add(galleryMediaContent);
             dataEditor.getMediaProvider().addMediaContent(dataEditor.getProcess().getId(), galleryMediaContent);
         }
+    }
+
+
+    private String getPreviewBaseUrl(UIComponent component) {
+        FacesContext context = FacesContext.getCurrentInstance();
+
+        Map<Object, Object> attributes = context.getAttributes();
+
+        String baseUrl = (String) attributes.get(PREVIEW_BASE_URL_KEY);
+
+        if (baseUrl == null) {
+            ValueExpression valueExpression = context.getApplication()
+                .getExpressionFactory()
+                .createValueExpression(
+                    context.getELContext(),
+                    "#{mediaProvider.previewData}",
+                    Object.class);
+
+            Lazy<Object> value = new Lazy<>(
+                () -> valueExpression.getValue(context.getELContext()));
+
+            baseUrl = DynamicContentSrcBuilder.build(
+                context,
+                component,
+                valueExpression,
+                value,
+                true,
+                true);
+
+            attributes.put(PREVIEW_BASE_URL_KEY, baseUrl);
+        }
+
+        return baseUrl;
     }
 
     /**

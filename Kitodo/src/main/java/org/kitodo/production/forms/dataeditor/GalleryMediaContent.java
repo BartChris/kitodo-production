@@ -108,6 +108,16 @@ public class GalleryMediaContent {
         this.logicalTreeNodeId = logicalTreeNodeId;
     }
 
+    private String previewUrl;
+
+    public String getPreviewUrl() {
+        return previewUrl;
+    }
+
+    public void setPreviewUrl(String previewUrl) {
+        this.previewUrl = previewUrl;
+    }
+
     private boolean showLogicalPageNumber;
     private String logicalPageNumber;
 

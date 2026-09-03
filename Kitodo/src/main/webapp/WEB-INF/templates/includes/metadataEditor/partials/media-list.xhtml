@@ -8,6 +8,13 @@
                     #{media.lastSelectionInUnstructuredStripe ? 'last-selection' : ''}"
              data-order="#{media.order}"
              data-id="#{media.id}">
+
+            <img
+                    class="mediaListItem"
+                    src="#{media.previewUrl}"
+                    loading="lazy"
+                    alt="" />
+
             <div class="thumbnail-overlay">
                 <span class="overlay-text">
                     #{media.normalOverlayText}
@@ -17,9 +24,11 @@
                 </span>
             </div>
         </div>
+
         <div class="thumbnail-banner physical #{media.showPhysicalPageNumber ? '' : 'hidden'}">
             #{media.physicalPageNumber}
         </div>
+
         <div class="thumbnail-banner logical #{media.showLogicalPageNumber ? '' : 'hidden'}">
             #{media.logicalPageNumber}
         </div>
