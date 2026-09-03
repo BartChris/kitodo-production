@@ -16,7 +16,7 @@
         xmlns:f="http://xmlns.jcp.org/jsf/core"
         xmlns:h="http://xmlns.jcp.org/jsf/html"
         xmlns:p="http://primefaces.org/ui"
-        xmlns:a="http://xmlns.jcp.org/jsf/passthrough">
+        xmlns:a="http://xmlns.jcp.org/jsf/passthrough" xmlns:timing="http://kitodo.org/timing">
     <p:panel id="galleryWrapperPanel" styleClass="wrapperPanel">
         <!--@elvariable id="readOnly" type="boolean"-->
         <ui:param name="readOnly" value="#{SecurityAccessController.hasAuthorityToViewProcessStructureData() and not SecurityAccessController.hasAuthorityToEditProcessStructureData()}"/>
@@ -77,12 +77,13 @@
 
             <!-- Pages in structured view -->
             <ui:fragment rendered="#{DataEditorForm.galleryPanel.galleryViewMode eq 'list' and not empty DataEditorForm.galleryPanel.stripes}">
-                <p:fieldset id="structuredPagesField"
+               <p:fieldset id="structuredPagesField"
                             a:onmousedown="metadataEditor.gallery.handleMouseDown(event)"
                             a:onmouseup="metadataEditor.gallery.handleMouseUp(event)"
                             a:ondragstart="metadataEditor.gallery.handleDragStart(event)">
                     <!--@elvariable id="currentElement" type="org.kitodo.production.forms.dataeditor.GalleryStripe"-->
-                    <p:dataList id="structuredPages"
+                   <timing:timingPanel id="structuredPagesRenderTimer">
+                   <p:dataList id="structuredPages"
                                 var="stripe"
                                 value="#{DataEditorForm.galleryPanel.stripes}"
                                 type="definition"
@@ -128,6 +129,7 @@
                             </p:dataList>
                         </p:outputPanel>
                     </p:dataList>
+                   </timing:timingPanel>
 
                     <!-- Unstructured media-->
                     <p:outputPanel>
@@ -136,6 +138,7 @@
                                        a:data-stripe="0"
                                        a:data-logicalTreeNodeId="#{DataEditorForm.galleryPanel.stripes.getFirst().logicalTreeNodeId}"
                                        />
+                        <timing:timingPanel id="unstructuredMediaRenderTimer">
                         <h:panelGroup id="unstructuredMedia"
                                       layout="block">
                             <p:outputPanel>
@@ -152,10 +155,16 @@
                                              rendered="#{editImages}"
                                              styleClass="page-drop-area"/>
                                     <p:panel id="unstructuredMediaPanel" styleClass="draggableUnstructuredMediaPanel">
+                                        <timing:timingPanel
+                                                id="mediaListItemRenderTimer"
+                                                label="unstructured-media-list-item"
+                                                aggregate="true"
+                                                expectedCount="#{DataEditorForm.galleryPanel.stripes.getFirst().medias.size()}">
                                         <ui:include
                                                 src="/WEB-INF/templates/includes/metadataEditor/partials/media-list.xhtml">
                                             <ui:param name="uiParamStripeIndex" value="0"/>
                                         </ui:include>
+                                        </timing:timingPanel>
                                     </p:panel>
                                     <!-- add one last drop area after the last page in a stripe -->
                                     <ui:fragment rendered="#{editImages and DataEditorForm.galleryPanel.stripes.getFirst().medias.size() ne 0 and DataEditorForm.galleryPanel.stripes.getFirst().medias.size() - 1 eq currentMedia.rowIndex}">
@@ -165,6 +174,7 @@
                                 </p:dataList>
                             </p:outputPanel>
                         </h:panelGroup>
+                        </timing:timingPanel>
                     </p:outputPanel>
 
                 </p:fieldset>
@@ -323,4 +333,5 @@
         <h:outputScript name="js/metadataeditor_tree_drag_drop.js" />
         <h:outputScript name="js/metadataeditor_gallery_drag_drop.js" rendered="#{editImages}" />
     </p:panel>
+
 </ui:composition>

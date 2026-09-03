@@ -18,9 +18,17 @@
         xmlns:f="http://xmlns.jcp.org/jsf/core"
         xmlns:h="http://xmlns.jcp.org/jsf/html"
         xmlns:p="http://primefaces.org/ui"
-        xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+        xmlns:ui="http://xmlns.jcp.org/jsf/facelets" xmlns:timing="http://kitodo.org/timing">
 
     <p:outputPanel styleClass="thumbnail-parent" >
+        <!-- =========================================================
+       1. SELECTION / STYLE REGION
+       ========================================================= -->
+        <timing:timingPanel
+                id="selectionRenderTimer"
+                label="media-list-selection"
+                aggregate="true"
+                expectedCount="#{DataEditorForm.galleryPanel.stripes.getFirst().medias.size()}">
         <c:choose>
             <c:when test="#{uiParamStripeIndex eq '0' || uiParamStripeIndex eq 0}">
                 <c:set var="thumbnailStyleClass"
@@ -33,11 +41,25 @@
         </c:choose>
         <p:outputPanel
                 styleClass="thumbnail #{DataEditorForm.consecutivePagesSelected() ? '' : 'discontinuous'} #{thumbnailStyleClass}"/>
+        </timing:timingPanel>
+
+        <!-- =========================================================
+             thumbnail-container itself stays OUTSIDE the timers
+             ========================================================= -->
         <p:outputPanel styleClass="thumbnail-container #{fn:startsWith(media.previewMimeType, 'video') ? 'media-type-video' : ''}#{fn:startsWith(media.previewMimeType, 'audio') ? 'media-type-audio' : ''}"
                        a:data-order="#{media.order}"
                        a:data-stripe="#{uiParamStripeIndex}"
                        a:data-logicalTreeNodeId="#{media.logicalTreeNodeId}">
+            <!-- =====================================================
+          2. PREVIEW / MEDIA REGION
+          ===================================================== -->
 
+
+            <timing:timingPanel
+                    id="previewRenderTimer"
+                    label="media-list-preview"
+                    aggregate="true"
+                    expectedCount="#{DataEditorForm.galleryPanel.stripes.getFirst().medias.size()}">
             <ui:fragment
                     rendered="#{mediaProvider.hasPreviewVariant(media) and (fn:startsWith(media.previewMimeType, 'video') or fn:startsWith(media.previewMimeType, 'audio'))}">
                 <p:video styleClass="mediaListItem"
@@ -76,6 +98,12 @@
 
             <ui:fragment rendered="#{mediaProvider.hasPreviewVariant(media) and fn:startsWith(media.previewMimeType, 'image')}">
                 <h:outputText>
+                    <timing:timingPanel
+                            id="graphicImageRenderTimer"
+                            label="media-list-graphic-image"
+                            aggregate="true"
+                            expectedCount="#{DataEditorForm.galleryPanel.stripes.getFirst().medias.size()}">
+
                     <!-- only render those pages that are not assigned to a stripe (structure) here! -->
                     <p:graphicImage styleClass="mediaListItem" value="#{mediaProvider.previewData}"
                                     a:loading="lazy">
@@ -86,6 +114,7 @@
                         <f:param name="sessionId"
                                  value="#{DataEditorForm.galleryPanel.cachingUUID}"/>
                     </p:graphicImage>
+                    </timing:timingPanel>
                 </h:outputText>
                 <h:outputText value="#{DataEditorForm.galleryPanel.getSeveralAssignmentsIndex(media) + 1}"
                               rendered="#{media.assignedSeveralTimes}"
@@ -108,8 +137,15 @@
                               rendered="#{media.assignedSeveralTimes}"
                               styleClass="assigned-several-times"/>
             </ui:fragment>
+            </timing:timingPanel>
+            <timing:timingPanel
+                    id="contentRenderTimer"
+                    label="media-list-content"
+                    aggregate="true"
+                    expectedCount="#{DataEditorForm.galleryPanel.stripes.getFirst().medias.size()}">
 
             <ui:include src="media-list-content.xhtml"/>
+            </timing:timingPanel>
 
         </p:outputPanel>
         

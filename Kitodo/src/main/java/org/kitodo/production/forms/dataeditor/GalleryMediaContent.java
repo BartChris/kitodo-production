@@ -43,6 +43,7 @@ public class GalleryMediaContent {
      */
     private final String id;
 
+
     /**
      * URI to content for media preview.
      */
@@ -65,6 +66,7 @@ public class GalleryMediaContent {
      * this fixed type for distinction.</p>
      */
     private final MediaContentType type;
+
 
     /**
      * Stores the primefaces tree node id of the corresponding tree node of the logical structure 

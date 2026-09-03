@@ -43,6 +43,17 @@ public class MediaProvider implements Serializable {
     private static final Logger logger = LogManager.getLogger(MediaProvider.class);
 
     private final Map<Integer, Map<String, GalleryMediaContent>> mediaResolver = new HashMap<>();
+    private static final ThreadLocal<Long> hasPreviewVariantTotalNanos =
+        ThreadLocal.withInitial(() -> 0L);
+
+    private static final ThreadLocal<Integer> hasPreviewVariantCalls =
+        ThreadLocal.withInitial(() -> 0);
+
+    private static final ThreadLocal<Long> hasMediaViewVariantTotalNanos =
+        ThreadLocal.withInitial(() -> 0L);
+
+    private static final ThreadLocal<Integer> hasMediaViewVariantCalls =
+        ThreadLocal.withInitial(() -> 0);
 
     /**
      * Get the media resolver.
@@ -76,14 +87,52 @@ public class MediaProvider implements Serializable {
         mediaResolver.remove(processId);
     }
 
+    private static final ThreadLocal<Long> previewDataTotalNanos =
+        ThreadLocal.withInitial(() -> 0L);
+
+    private static final ThreadLocal<Integer> previewDataCalls =
+        ThreadLocal.withInitial(() -> 0);
+
     /**
      * Returns the media content of the preview media.
      *
      * @return preview of media content as PrimeFaces StreamedContent
      */
     public StreamedContent getPreviewData() {
-        Map<String, String> parameterMap = FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap();
-        return getMediaContent(PREVIEW, parameterMap.get(PROCESS), parameterMap.get(MEDIA_ID));
+        long start = System.nanoTime();
+
+        try {
+            Map<String, String> parameterMap = FacesContext
+                .getCurrentInstance()
+                .getExternalContext()
+                .getRequestParameterMap();
+
+            return getMediaContent(
+                PREVIEW,
+                parameterMap.get(PROCESS),
+                parameterMap.get(MEDIA_ID));
+
+        } finally {
+            long elapsed = System.nanoTime() - start;
+
+            long total = previewDataTotalNanos.get() + elapsed;
+            int calls = previewDataCalls.get() + 1;
+
+            previewDataTotalNanos.set(total);
+            previewDataCalls.set(calls);
+
+            if (calls == 792) {
+                logger.info(
+                    "[MEDIA-TIMING] getPreviewData TOTAL = {} ms, calls = {}, avg = {} ms",
+                    String.format("%.3f", total / 1_000_000.0),
+                    calls,
+                    String.format("%.3f",
+                        total / 1_000_000.0 / calls));
+
+                previewDataTotalNanos.remove();
+                previewDataCalls.remove();
+            }
+        }
     }
 
     /**
@@ -104,7 +153,38 @@ public class MediaProvider implements Serializable {
      * @return True if media content has preview variant
      */
     public boolean hasPreviewVariant(GalleryMediaContent galleryMediaContent) {
-        return Objects.nonNull(galleryMediaContent) && galleryMediaContent.isShowingInPreview();
+        long start = System.nanoTime();
+
+        try {
+            return Objects.nonNull(galleryMediaContent)
+                && galleryMediaContent.isShowingInPreview();
+
+        } finally {
+            long elapsed = System.nanoTime() - start;
+
+            long total = hasPreviewVariantTotalNanos.get() + elapsed;
+            int calls = hasPreviewVariantCalls.get() + 1;
+
+            hasPreviewVariantTotalNanos.set(total);
+            hasPreviewVariantCalls.set(calls);
+
+            /*
+             * For the current test object we have 792 unstructured media.
+             * Log after 792 evaluations.
+             */
+            if (calls == 792) {
+                logger.info(
+                    "[MEDIA-TIMING] hasPreviewVariant TOTAL = {} ms, calls = {}, avg = {} ms",
+                    String.format("%.3f", total / 1_000_000.0),
+                    calls,
+                    String.format(
+                        "%.6f",
+                        total / 1_000_000.0 / calls));
+
+                hasPreviewVariantTotalNanos.remove();
+                hasPreviewVariantCalls.remove();
+            }
+        }
     }
 
     /**
@@ -115,7 +195,34 @@ public class MediaProvider implements Serializable {
      * @return True if media content has media view variant
      */
     public boolean hasMediaViewVariant(GalleryMediaContent galleryMediaContent) {
-        return Objects.nonNull(galleryMediaContent) && galleryMediaContent.isShowingInMediaView();
+        long start = System.nanoTime();
+
+        try {
+            return Objects.nonNull(galleryMediaContent)
+                && galleryMediaContent.isShowingInMediaView();
+
+        } finally {
+            long elapsed = System.nanoTime() - start;
+
+            long total = hasMediaViewVariantTotalNanos.get() + elapsed;
+            int calls = hasMediaViewVariantCalls.get() + 1;
+
+            hasMediaViewVariantTotalNanos.set(total);
+            hasMediaViewVariantCalls.set(calls);
+
+            if (calls == 792) {
+                logger.info(
+                    "[MEDIA-TIMING] hasMediaViewVariant TOTAL = {} ms, calls = {}, avg = {} ms",
+                    String.format("%.3f", total / 1_000_000.0),
+                    calls,
+                    String.format(
+                        "%.6f",
+                        total / 1_000_000.0 / calls));
+
+                hasMediaViewVariantTotalNanos.remove();
+                hasMediaViewVariantCalls.remove();
+            }
+        }
     }
 
     private StreamedContent getMediaContent(String mediaVariant, String processIdString, String mediaIdString) {

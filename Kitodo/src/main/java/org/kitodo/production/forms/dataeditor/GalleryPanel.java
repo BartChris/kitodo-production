@@ -62,6 +62,18 @@ import org.primefaces.PrimeFaces;
 public class GalleryPanel {
     private static final Logger logger = LogManager.getLogger(GalleryPanel.class);
 
+    private static final ThreadLocal<Long> isSelectedTotalNanos =
+        ThreadLocal.withInitial(() -> 0L);
+
+    private static final ThreadLocal<Integer> isSelectedCalls =
+        ThreadLocal.withInitial(() -> 0);
+
+    private static final ThreadLocal<Long> isLastSelectionTotalNanos =
+        ThreadLocal.withInitial(() -> 0L);
+
+    private static final ThreadLocal<Integer> isLastSelectionCalls =
+        ThreadLocal.withInitial(() -> 0);
+
     private static final FileService fileService = ServiceManager.getFileService();
 
     // Structured media
@@ -146,13 +158,52 @@ public class GalleryPanel {
      * @param galleryMediaContent GalleryMediaContent to be checked
      * @return boolean
      */
-    public boolean isLastSelection(GalleryMediaContent galleryMediaContent, GalleryStripe galleryStripe) {
-        if (isSelected(galleryMediaContent, galleryStripe) && !dataEditor.getSelectedMedia().isEmpty()
+    public boolean isLastSelection(
+        GalleryMediaContent galleryMediaContent,
+        GalleryStripe galleryStripe) {
+
+        long start = System.nanoTime();
+
+        try {
+            if (isSelected(galleryMediaContent, galleryStripe)
+                && !dataEditor.getSelectedMedia().isEmpty()
                 && Objects.nonNull(galleryMediaContent)) {
-            return Objects.equals(galleryMediaContent.getView().getPhysicalDivision(),
-                    dataEditor.getSelectedMedia().get(dataEditor.getSelectedMedia().size() - 1).getKey());
+
+                return Objects.equals(
+                    galleryMediaContent.getView().getPhysicalDivision(),
+                    dataEditor.getSelectedMedia()
+                        .get(dataEditor.getSelectedMedia().size() - 1)
+                        .getKey());
+            }
+
+            return false;
+
+        } finally {
+            long elapsed = System.nanoTime() - start;
+
+            long total = isLastSelectionTotalNanos.get() + elapsed;
+            int calls = isLastSelectionCalls.get() + 1;
+
+            isLastSelectionTotalNanos.set(total);
+            isLastSelectionCalls.set(calls);
+
+            /*
+             * Current test document contains 800 gallery media items.
+             * Log once after all have been evaluated.
+             */
+            if (calls == 800) {
+                logger.info(
+                    "[SELECTION-TIMING] isLastSelection TOTAL = {} ms, calls = {}, avg = {} ms",
+                    String.format("%.3f", total / 1_000_000.0),
+                    calls,
+                    String.format(
+                        "%.6f",
+                        total / 1_000_000.0 / calls));
+
+                isLastSelectionTotalNanos.remove();
+                isLastSelectionCalls.remove();
+            }
         }
-        return false;
     }
 
     /**
@@ -350,30 +401,61 @@ public class GalleryPanel {
 
 
     void show() {
-        Process process = dataEditor.getProcess();
-        Project project = process.getProject();
-        List<PhysicalDivision> physicalDivisions = dataEditor.getWorkpiece()
+        long timingStart = System.nanoTime();
+
+        try {
+            Process process = dataEditor.getProcess();
+            Project project = process.getProject();
+            List<PhysicalDivision> physicalDivisions = dataEditor.getWorkpiece()
                 .getAllPhysicalDivisionChildrenSortedFilteredByPageAndTrack();
 
-        mediaContentTypeVariants.clear();
-        mediaContentTypePreviewFolder.clear();
+            mediaContentTypeVariants.clear();
+            mediaContentTypePreviewFolder.clear();
 
-        initMediaContentType(physicalDivisions, project.getPreview(), project.getMediaView(), MediaContentType.IMAGE);
-        initMediaContentType(physicalDivisions, project.getAudioPreview(), project.getAudioMediaView(),
+            initMediaContentType(
+                physicalDivisions,
+                project.getPreview(),
+                project.getMediaView(),
+                MediaContentType.IMAGE);
+
+            initMediaContentType(
+                physicalDivisions,
+                project.getAudioPreview(),
+                project.getAudioMediaView(),
                 MediaContentType.AUDIO);
-        initMediaContentType(physicalDivisions, project.getVideoPreview(), project.getVideoMediaView(),
+
+            initMediaContentType(
+                physicalDivisions,
+                project.getVideoPreview(),
+                project.getVideoMediaView(),
                 MediaContentType.VIDEO);
 
-        medias = new ArrayList<>(physicalDivisions.size());
-        stripes = new ArrayList<>();
-        dataEditor.getMediaProvider().resetMediaResolverForProcess(process.getId());
-        cachingUUID = UUID.randomUUID().toString();
+            medias = new ArrayList<>(physicalDivisions.size());
+            stripes = new ArrayList<>();
 
-        updateStripes();
+            dataEditor.getMediaProvider()
+                .resetMediaResolverForProcess(process.getId());
 
-        int imagesInStructuredView = stripes.parallelStream().mapToInt(stripe -> stripe.getMedias().size()).sum();
-        if (imagesInStructuredView > 200) {
-            logger.warn("Number of images in structured view: {}", imagesInStructuredView);
+            cachingUUID = UUID.randomUUID().toString();
+
+            updateStripes();
+
+            int imagesInStructuredView = stripes.parallelStream()
+                .mapToInt(stripe -> stripe.getMedias().size())
+                .sum();
+
+            if (imagesInStructuredView > 200) {
+                logger.warn(
+                    "Number of images in structured view: {}",
+                    imagesInStructuredView);
+            }
+        } finally {
+            double milliseconds =
+                (System.nanoTime() - timingStart) / 1_000_000.0;
+
+            logger.info(
+                "[INIT-TIMING] GalleryPanel.show = {} ms",
+                String.format("%.3f", milliseconds));
         }
     }
 
@@ -786,22 +868,74 @@ public class GalleryPanel {
      * @param galleryStripe the GalleryStripe where the GalleryMediaContent is located
      * @return Boolean whether passed GalleryMediaContent is selected
      */
-    public boolean isSelected(GalleryMediaContent galleryMediaContent, GalleryStripe galleryStripe) {
-        if (Objects.nonNull(galleryMediaContent) && Objects.nonNull(galleryMediaContent.getView())) {
-            PhysicalDivision physicalDivision = galleryMediaContent.getView().getPhysicalDivision();
-            if (Objects.nonNull(physicalDivision)) {
-                if (Objects.nonNull(galleryStripe)) {
-                    return dataEditor.isSelected(physicalDivision, galleryStripe.getStructure());
-                } else {
-                    GalleryStripe logicalStructure = getLogicalStructureOfMedia(galleryMediaContent);
-                    if (Objects.nonNull(logicalStructure)) {
-                        return dataEditor.isSelected(physicalDivision, logicalStructure.getStructure());
+    public boolean isSelected(
+        GalleryMediaContent galleryMediaContent,
+        GalleryStripe galleryStripe) {
+
+        long start = System.nanoTime();
+
+        try {
+            if (Objects.nonNull(galleryMediaContent)
+                && Objects.nonNull(galleryMediaContent.getView())) {
+
+                PhysicalDivision physicalDivision =
+                    galleryMediaContent.getView().getPhysicalDivision();
+
+                if (Objects.nonNull(physicalDivision)) {
+                    if (Objects.nonNull(galleryStripe)) {
+                        return dataEditor.isSelected(
+                            physicalDivision,
+                            galleryStripe.getStructure());
+                    } else {
+                        GalleryStripe logicalStructure =
+                            getLogicalStructureOfMedia(galleryMediaContent);
+
+                        if (Objects.nonNull(logicalStructure)) {
+                            return dataEditor.isSelected(
+                                physicalDivision,
+                                logicalStructure.getStructure());
+                        }
+
+                        return false;
                     }
-                    return false;
                 }
             }
+
+            return false;
+
+        } finally {
+            long elapsed = System.nanoTime() - start;
+
+            long total = isSelectedTotalNanos.get() + elapsed;
+            int calls = isSelectedCalls.get() + 1;
+
+            isSelectedTotalNanos.set(total);
+            isSelectedCalls.set(calls);
+
+            /*
+             * Each thumbnail calls isSelected() directly once.
+             *
+             * isLastSelection() also calls isSelected() once.
+             *
+             * For the current 800-media initialization:
+             *
+             *     800 direct calls
+             *   + 800 via isLastSelection()
+             *   = 1600 calls
+             */
+            if (calls == 1600) {
+                logger.info(
+                    "[SELECTION-TIMING] isSelected TOTAL = {} ms, calls = {}, avg = {} ms",
+                    String.format("%.3f", total / 1_000_000.0),
+                    calls,
+                    String.format(
+                        "%.6f",
+                        total / 1_000_000.0 / calls));
+
+                isSelectedTotalNanos.remove();
+                isSelectedCalls.remove();
+            }
         }
-        return false;
     }
 
     private void selectMedia(String physicalDivisionOrder, String stripeIndex, String selectionType) {

@@ -39,6 +39,17 @@
         <exception-handler-factory>org.omnifaces.exceptionhandler.FullAjaxExceptionHandlerFactory
         </exception-handler-factory>
     </factory>
+    <component>
+        <component-type>org.kitodo.JsfTimingPanel</component-type>
+        <component-class>
+            org.kitodo.production.session.JsfTimingPanel
+        </component-class>
+    </component>
+    <lifecycle>
+        <phase-listener>
+            org.kitodo.production.session.JsfTimingPhaseListener
+        </phase-listener>
+    </lifecycle>
     <render-kit>
         <renderer>
             <component-family>jakarta.faces.Form</component-family>
