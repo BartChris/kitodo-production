@@ -613,36 +613,88 @@ public class GalleryPanel {
         stripes = new ArrayList<>();
         addStripesRecursive(dataEditor.getWorkpiece().getLogicalStructure());
 
-        GalleryStripe unstructuredStripe = stripes.getFirst();
+        Pair<PhysicalDivision, LogicalDivision> lastSelection = getLastSelection();
 
-        for (GalleryMediaContent media : unstructuredStripe.getMedias()) {
-            PhysicalDivision physicalDivision = media.getView().getPhysicalDivision();
+        // Stripe-dependent state: calculate once per media occurrence.
+        for (int stripeIndex = 0; stripeIndex < stripes.size(); stripeIndex++) {
+            GalleryStripe stripe = stripes.get(stripeIndex);
 
-            media.setSelectedInUnstructuredStripe(
-                dataEditor.isSelected(
+            stripe.getSelectedMedia().clear();
+            stripe.getLastSelectedMedia().clear();
+
+            for (GalleryMediaContent media : stripe.getMedias()) {
+                PhysicalDivision physicalDivision =
+                    media.getView().getPhysicalDivision();
+
+                boolean selected = dataEditor.isSelected(
                     physicalDivision,
-                    unstructuredStripe.getStructure()));
+                    stripe.getStructure());
 
-            media.setLastSelectionInUnstructuredStripe(
-                isLastSelection(media, unstructuredStripe));
+                boolean lastSelected = selected
+                    && Objects.nonNull(lastSelection)
+                    && Objects.equals(
+                    physicalDivision,
+                    lastSelection.getKey());
+
+                stripe.getSelectedMedia().put(
+                    media.getId(),
+                    selected);
+
+                stripe.getLastSelectedMedia().put(
+                    media.getId(),
+                    lastSelected);
+
+                // Keep the existing fast unstructured properties for stripe 0.
+                if (stripeIndex == 0) {
+                    media.setSelectedInUnstructuredStripe(selected);
+                    media.setLastSelectionInUnstructuredStripe(lastSelected);
+                }
+            }
         }
 
-        for (GalleryStripe stripe : stripes) {
-            for (GalleryMediaContent media : stripe.getMedias()) {
+        boolean discontinuous = !dataEditor.consecutivePagesSelected();
+        PreviewHoverMode previewHoverMode = getPreviewHoverMode();
 
-                media.setNormalOverlayText(media.getOrderlabel());
+        FacesContext context = FacesContext.getCurrentInstance();
 
-                media.setAssignmentIndex(
-                    media.isAssignedSeveralTimes()
-                        ? getSeveralAssignmentsIndex(media) + 1
-                        : 0);
+        boolean showPhysicalPageNumber = Boolean.TRUE.equals(
+            context.getApplication().evaluateExpressionGet(
+                context,
+                "#{LoginForm.loggedUser.isShowPhysicalPageNumberBelowThumbnail()}",
+                Boolean.class));
 
-                media.setShowPhysicalPageNumber(true);
-                media.setPhysicalPageNumber(media.getOrder());
+        boolean showLogicalPageNumber = Boolean.TRUE.equals(
+            context.getApplication().evaluateExpressionGet(
+                context,
+                "#{LoginForm.loggedUser.isShowLogicalPageNumberBelowThumbnail()}",
+                Boolean.class));
 
-                media.setShowLogicalPageNumber(true);
-                media.setLogicalPageNumber(media.getOrderlabel());
-            }
+        // Media/global state: once per canonical media.
+        for (GalleryMediaContent media : medias) {
+            media.setDiscontinuous(discontinuous);
+
+            media.setPreviewTooltip(
+                PreviewHoverMode.TOOLTIP_PREVIEW.equals(previewHoverMode)
+                    && media.isShowingInPreview()
+                    && MediaUtil.isImage(media.getPreviewMimeType())
+                    ||
+                    PreviewHoverMode.TOOLTIP_MEDIAVIEW.equals(previewHoverMode)
+                        && media.isShowingInMediaView()
+                        && MediaUtil.isImage(media.getMediaViewMimeType())
+            );
+
+            media.setNormalOverlayText(media.getOrderlabel());
+
+            media.setAssignmentIndex(
+                media.isAssignedSeveralTimes()
+                    ? getSeveralAssignmentsIndex(media) + 1
+                    : 0);
+
+            media.setShowPhysicalPageNumber(showPhysicalPageNumber);
+            media.setPhysicalPageNumber(media.getOrder());
+
+            media.setShowLogicalPageNumber(showLogicalPageNumber);
+            media.setLogicalPageNumber(media.getOrderlabel());
         }
     }
 

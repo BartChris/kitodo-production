@@ -12,7 +12,9 @@
 package org.kitodo.production.forms.dataeditor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.kitodo.api.dataeditor.rulesetmanagement.RulesetManagementInterface;
 import org.kitodo.api.dataeditor.rulesetmanagement.StructuralElementViewInterface;
@@ -51,6 +53,9 @@ public class GalleryStripe {
      */
     private final String logicalTreeNodeId;
 
+    private final Map<String, Boolean> selectedMedia = new HashMap<>();
+    private final Map<String, Boolean> lastSelectedMedia = new HashMap<>();
+
     /**
      * Creates a new gallery stripe.
      *
@@ -72,6 +77,14 @@ public class GalleryStripe {
      */
     public String getLabel() {
         return label;
+    }
+
+    public Map<String, Boolean> getSelectedMedia() {
+        return selectedMedia;
+    }
+
+    public Map<String, Boolean> getLastSelectedMedia() {
+        return lastSelectedMedia;
     }
 
     /**

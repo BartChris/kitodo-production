@@ -107,13 +107,14 @@
                     disabled="#{not SecurityAccessController.hasAuthorityToEditProcessStructureData()}"
                     listener="#{DataEditorForm.structurePanel.onDragDrop}"
                     update="logicalTree
-                            contextMenuLogicalTree
-                            metadataAccordion:logicalMetadataHeader
-                            metadataAccordion:logicalMetadataWrapperPanel
-                            @(.pageList)
-                            paginationForm:paginationWrapperPanel
-                            imagePreviewForm:thumbnailStripe
-                            imagePreviewForm:mediaContextMenu"/>
+                        contextMenuLogicalTree
+                        metadataAccordion:logicalMetadataHeader
+                        metadataAccordion:logicalMetadataWrapperPanel
+                        imagePreviewForm:previewUrlPreparation
+                        @(.pageList)
+                        paginationForm:paginationWrapperPanel
+                        imagePreviewForm:thumbnailStripe
+                        imagePreviewForm:mediaContextMenu"/>
             <p:ajax event="collapse"
                     listener="#{DataEditorForm.structurePanel.onNodeCollapse}"/>
             <p:ajax event="expand"

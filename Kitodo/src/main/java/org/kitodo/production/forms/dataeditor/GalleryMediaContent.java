@@ -110,6 +110,10 @@ public class GalleryMediaContent {
 
     private String previewUrl;
 
+    private boolean discontinuous;
+
+    private boolean previewTooltip;
+
     public String getPreviewUrl() {
         return previewUrl;
     }
@@ -129,6 +133,14 @@ public class GalleryMediaContent {
         this.showLogicalPageNumber = showLogicalPageNumber;
     }
 
+    public boolean isPreviewTooltip() {
+        return previewTooltip;
+    }
+
+    public void setPreviewTooltip(boolean previewTooltip) {
+        this.previewTooltip = previewTooltip;
+    }
+
     public String getLogicalPageNumber() {
         return logicalPageNumber;
     }
@@ -142,6 +154,15 @@ public class GalleryMediaContent {
 
     public boolean isShowPhysicalPageNumber() {
         return showPhysicalPageNumber;
+    }
+
+
+    public boolean isDiscontinuous() {
+        return discontinuous;
+    }
+
+    public void setDiscontinuous(boolean discontinuous) {
+        this.discontinuous = discontinuous;
     }
 
     public void setShowPhysicalPageNumber(boolean showPhysicalPageNumber) {

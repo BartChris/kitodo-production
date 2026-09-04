@@ -28,19 +28,21 @@
             <h:panelGroup binding="#{previewUrlComponent}" />
 
             <h:outputText
+                    id="previewUrlPreparation"
                     value="#{DataEditorForm.galleryPanel.preparePreviewUrls(
-                 previewUrlComponent,
-                 DataEditorForm.process.id,
-                 session.id)}"
+             previewUrlComponent,
+             DataEditorForm.process.id,
+             session.id)}"
                     style="display:none" />
 
             <p:remoteCommand
-                name="triggerOnPageDrop"
-                actionListener="#{DataEditorForm.galleryPanel.onPageDrop}"
-                update="@(.pageList)
-                        logicalTree
-                        physicalTree
-                        paginationForm:paginationWrapperPanel"/>
+                    name="triggerOnPageDrop"
+                    actionListener="#{DataEditorForm.galleryPanel.onPageDrop}"
+                    update="previewUrlPreparation
+                    @(.pageList)
+                    logicalTree
+                    physicalTree
+                    paginationForm:paginationWrapperPanel"/>
 
             <p:remoteCommand name="sendGallerySelect"
                              action="#{DataEditorForm.galleryPanel.select}"

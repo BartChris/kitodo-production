@@ -3,34 +3,112 @@
         xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
 
     <p:outputPanel styleClass="thumbnail-parent">
-        <div class="test-thumbnail
-                    #{media.selectedInUnstructuredStripe ? 'selected' : ''}
-                    #{media.lastSelectionInUnstructuredStripe ? 'last-selection' : ''}"
+
+        <div class="thumbnail
+            #{media.discontinuous ? 'discontinuous' : ''}
+
+            #{uiParamStripeIndex eq 0 and media.selectedInUnstructuredStripe
+                ? 'selected' : ''}
+            #{uiParamStripeIndex eq 0 and media.lastSelectionInUnstructuredStripe
+                ? 'last-selection' : ''}
+
+            #{uiParamStripeIndex ne 0 and stripe.selectedMedia[media.id]
+                ? 'selected' : ''}
+            #{uiParamStripeIndex ne 0 and stripe.lastSelectedMedia[media.id]
+                ? 'last-selection' : ''}">
+        </div>
+
+        <div class="thumbnail-container
+             #{media.type eq 'VIDEO' ? 'media-type-video' : ''}
+             #{media.type eq 'AUDIO' ? 'media-type-audio' : ''}"
              data-order="#{media.order}"
-             data-id="#{media.id}">
+             data-stripe="#{uiParamStripeIndex}"
+             data-logicalTreeNodeId="#{media.logicalTreeNodeId}">
 
-            <img
-                    class="mediaListItem"
-                    src="#{media.previewUrl}"
-                    loading="lazy"
-                    alt="" />
+            <ui:fragment rendered="#{media.showingInPreview}">
+                <img
+                        class="mediaListItem"
+                        src="#{media.previewUrl}"
+                        loading="lazy"
+                        alt="" />
+            </ui:fragment>
 
-            <div class="thumbnail-overlay">
-                <span class="overlay-text">
-                    #{media.normalOverlayText}
-                </span>
-                <span class="multiple-assignment #{media.showAssignmentIndex ? '' : 'hidden'}">
-                    #{media.assignmentIndex}
-                </span>
-            </div>
+            <ui:fragment rendered="#{not media.showingInPreview}">
+                <div class="mediaListIconItem">
+
+                    <ui:fragment rendered="#{media.type eq 'VIDEO'}">
+                        <i class="fa fa-file-video-o"></i>
+                    </ui:fragment>
+
+                    <ui:fragment rendered="#{media.type eq 'AUDIO'}">
+                        <i class="fa fa-file-audio-o"></i>
+                    </ui:fragment>
+
+                    <ui:fragment rendered="#{media.type eq 'IMAGE'}">
+                        <i class="fa fa-file-image-o"></i>
+                    </ui:fragment>
+
+                </div>
+            </ui:fragment>
+
+            <span class="assigned-several-times #{media.showAssignmentIndex ? '' : 'hidden'}">
+                #{media.assignmentIndex}
+            </span>
+
+            <ui:fragment rendered="#{not media.previewTooltip}">
+                <div class="thumbnail-overlay">
+
+                    <ui:fragment rendered="#{media.type eq 'VIDEO'}">
+                        <span>
+                            #{msgs.video} #{media.shortId}
+                        </span>
+                    </ui:fragment>
+
+                    <ui:fragment rendered="#{media.type eq 'AUDIO'}">
+                        <span>
+                            #{msgs.audio} #{media.shortId}
+                        </span>
+                    </ui:fragment>
+
+                    <ui:fragment rendered="#{media.type eq 'IMAGE'}">
+                        <span>
+                            #{msgs.image} #{media.shortId}, #{msgs.page} #{media.orderlabel}
+                        </span>
+                    </ui:fragment>
+
+                </div>
+            </ui:fragment>
+
+            <ui:fragment rendered="#{media.previewTooltip}">
+                <div class="mediaListImageTooltipTrigger thumbnail-overlay">
+                    <span>
+                        <i class="fa fa-search-plus"></i>
+                    </span>
+                </div>
+            </ui:fragment>
+
         </div>
 
         <div class="thumbnail-banner physical #{media.showPhysicalPageNumber ? '' : 'hidden'}">
-            #{media.physicalPageNumber}
+
+            <ui:fragment rendered="#{media.type eq 'VIDEO'}">
+                #{msgs.video} #{media.shortId}
+            </ui:fragment>
+
+            <ui:fragment rendered="#{media.type eq 'AUDIO'}">
+                #{msgs.audio} #{media.shortId}
+            </ui:fragment>
+
+            <ui:fragment rendered="#{media.type eq 'IMAGE'}">
+                #{msgs.image} #{media.shortId}
+            </ui:fragment>
+
         </div>
 
         <div class="thumbnail-banner logical #{media.showLogicalPageNumber ? '' : 'hidden'}">
-            #{media.logicalPageNumber}
+            #{msgs.page} #{media.orderlabel}
         </div>
+
     </p:outputPanel>
+
 </ui:composition>
