@@ -1,4 +1,5 @@
 <ui:composition
+        xmlns:f="http://xmlns.jcp.org/jsf/core"
         xmlns:p="http://primefaces.org/ui"
         xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
 
@@ -26,11 +27,77 @@
              data-logicalTreeNodeId="#{media.logicalTreeNodeId}">
 
             <ui:fragment rendered="#{media.showingInPreview}">
-                <img
-                        class="mediaListItem"
-                        src="#{media.previewUrl}"
-                        loading="lazy"
-                        alt="" />
+
+                <ui:fragment rendered="#{media.type eq 'VIDEO'}">
+                    <p:video
+                            styleClass="mediaListItem"
+                            player="#{media.previewMimeType.substring(media.previewMimeType.lastIndexOf('/') + 1)}"
+                            controls="true"
+                            value="#{mediaProvider.previewData}">
+
+                        <f:param
+                                name="mediaId"
+                                value="#{media.id}"/>
+
+                        <f:param
+                                name="process"
+                                value="#{DataEditorForm.process.id}"/>
+
+                        <f:param
+                                name="sessionId"
+                                value="#{DataEditorForm.galleryPanel.cachingUUID}"/>
+
+                        <f:param
+                                name="type"
+                                value="#{media.previewMimeType}"/>
+
+                        <f:param
+                                name="krsc"
+                                value="true"/>
+
+                    </p:video>
+                </ui:fragment>
+
+                <ui:fragment rendered="#{media.type eq 'AUDIO'}">
+                    <p:audio
+                            styleClass="mediaListItem"
+                            player="#{media.previewMimeType.endsWith('mpeg')
+                                ? 'mp3'
+                                : media.previewMimeType.substring(media.previewMimeType.lastIndexOf('/') + 1)}"
+                            controls="true"
+                            value="#{mediaProvider.previewData}">
+
+                        <f:param
+                                name="mediaId"
+                                value="#{media.id}"/>
+
+                        <f:param
+                                name="process"
+                                value="#{DataEditorForm.process.id}"/>
+
+                        <f:param
+                                name="sessionId"
+                                value="#{DataEditorForm.galleryPanel.cachingUUID}"/>
+
+                        <f:param
+                                name="type"
+                                value="#{media.previewMimeType}"/>
+
+                        <f:param
+                                name="krsc"
+                                value="true"/>
+
+                    </p:audio>
+                </ui:fragment>
+
+                <ui:fragment rendered="#{media.type eq 'IMAGE'}">
+                    <img
+                            class="mediaListItem"
+                            src="#{media.previewUrl}"
+                            loading="lazy"
+                            alt="" />
+                </ui:fragment>
+
             </ui:fragment>
 
             <ui:fragment rendered="#{not media.showingInPreview}">
@@ -55,37 +122,8 @@
                 #{media.assignmentIndex}
             </span>
 
-            <ui:fragment rendered="#{not media.previewTooltip}">
-                <div class="thumbnail-overlay">
-
-                    <ui:fragment rendered="#{media.type eq 'VIDEO'}">
-                        <span>
-                            #{msgs.video} #{media.shortId}
-                        </span>
-                    </ui:fragment>
-
-                    <ui:fragment rendered="#{media.type eq 'AUDIO'}">
-                        <span>
-                            #{msgs.audio} #{media.shortId}
-                        </span>
-                    </ui:fragment>
-
-                    <ui:fragment rendered="#{media.type eq 'IMAGE'}">
-                        <span>
-                            #{msgs.image} #{media.shortId}, #{msgs.page} #{media.orderlabel}
-                        </span>
-                    </ui:fragment>
-
-                </div>
-            </ui:fragment>
-
-            <ui:fragment rendered="#{media.previewTooltip}">
-                <div class="mediaListImageTooltipTrigger thumbnail-overlay">
-                    <span>
-                        <i class="fa fa-search-plus"></i>
-                    </span>
-                </div>
-            </ui:fragment>
+            <ui:include
+                    src="/WEB-INF/templates/includes/metadataEditor/partials/media-list-content.xhtml"/>
 
         </div>
 
