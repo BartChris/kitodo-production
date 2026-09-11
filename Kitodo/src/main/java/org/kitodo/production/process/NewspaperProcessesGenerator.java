@@ -345,7 +345,10 @@ public class NewspaperProcessesGenerator extends ProcessGenerator {
 
         titleGenerator = initializeTitleGenerator(configProject, overallWorkpiece, allowedMetadata);
 
-        processesToCreate = course.getProcesses();
+        processesToCreate = course.getProcesses().stream()
+            .flatMap(Collection::stream)
+            .map(Collections::singletonList)
+            .toList();
 
         if (logger.isTraceEnabled()) {
             logger.trace("Initialization took {} ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - begin));
@@ -537,7 +540,7 @@ public class NewspaperProcessesGenerator extends ProcessGenerator {
         getGeneratedProcess().setParent(yearProcess);
         yearProcess.getChildren().add(getGeneratedProcess());
         processService.save(getGeneratedProcess());
-        createMetadataFileForProcess(individualIssuesForProcess, title);
+        createMetadataFileForProcess(firstIssue, title);
         processService.save(getGeneratedProcess());
 
         if (logger.isTraceEnabled()) {
@@ -565,48 +568,35 @@ public class NewspaperProcessesGenerator extends ProcessGenerator {
         return title;
     }
 
-    private void createMetadataFileForProcess(List<IndividualIssue> individualIssues, String title)
-            throws IOException, CommandException {
+    private void createMetadataFileForProcess(IndividualIssue individualIssue, String title)
+        throws IOException, CommandException {
 
-        LogicalDivision logicalStructure = new LogicalDivision();
-        MetadataEntry dateMetadataEntry = new MetadataEntry();
-        dateMetadataEntry.setKey(monthSimpleMetadataView.getId());
-        dateMetadataEntry.setValue(dateMark(monthSimpleMetadataView.getScheme(), individualIssues.getFirst().getDate()));
-        logicalStructure.getMetadata().add(dateMetadataEntry);
-
-        for (IndividualIssue individualIssue : individualIssues) {
-
-            String monthMark = dateMark(monthSimpleMetadataView.getScheme(), individualIssue.getDate());
-            LogicalDivision yearMonth = getOrCreateLogicalDivision(yearWorkpiece.getLogicalStructure(),
-                monthType, monthSimpleMetadataView, monthMark);
-            String dayMark = dateMark(daySimpleMetadataView.getScheme(), individualIssue.getDate());
-            final LogicalDivision processDay = getOrCreateLogicalDivision(logicalStructure, null,
-                daySimpleMetadataView, dayMark);
-            final LogicalDivision yearDay = getOrCreateLogicalDivision(yearMonth, dayType,
-                daySimpleMetadataView, dayMark);
-
-            LogicalDivision processIssue = new LogicalDivision();
-            processIssue.setType(issueDivisionView.getId());
-            for (SimpleMetadataViewInterface issueProcessTitleView : issueProcessTitleViews) {
-                MetadataEditor.writeMetadataEntry(processIssue, issueProcessTitleView, title);
-            }
-            addCustomMetadata(individualIssue, processIssue);
-            processDay.getChildren().add(processIssue);
-
-            LogicalDivision yearIssue = new LogicalDivision();
-            yearIssue.setType(issueDivisionView.getId());
-            LinkedMetsResource linkToProcess = new LinkedMetsResource();
-            linkToProcess.setLoctype("Kitodo.Production");
-            linkToProcess.setUri(processService.getProcessURI(getGeneratedProcess()));
-            yearIssue.setLink(linkToProcess);
-            yearDay.getChildren().add(yearIssue);
+        LogicalDivision processIssue = new LogicalDivision();
+        processIssue.setType(issueDivisionView.getId());
+        for (SimpleMetadataViewInterface issueProcessTitleView : issueProcessTitleViews) {
+            MetadataEditor.writeMetadataEntry(processIssue, issueProcessTitleView, title);
         }
+        addCustomMetadata(individualIssue, processIssue);
+
+        LogicalDivision yearIssue = new LogicalDivision();
+        yearIssue.setType(issueDivisionView.getId());
+        LinkedMetsResource linkToProcess = new LinkedMetsResource();
+        linkToProcess.setLoctype("Kitodo.Production");
+        linkToProcess.setUri(processService.getProcessURI(getGeneratedProcess()));
+        yearIssue.setLink(linkToProcess);
+        String monthMark = dateMark(monthSimpleMetadataView.getScheme(), individualIssue.getDate());
+        String dayMark = dateMark(daySimpleMetadataView.getScheme(), individualIssue.getDate());
+        LogicalDivision yearMonth = getOrCreateLogicalDivision(yearWorkpiece.getLogicalStructure(),
+            monthType, monthSimpleMetadataView, monthMark);
+        LogicalDivision yearDay = getOrCreateLogicalDivision(yearMonth, dayType,
+            daySimpleMetadataView, dayMark);
+        yearDay.getChildren().add(yearIssue);
 
         Workpiece workpiece = new Workpiece();
-        workpiece.setLogicalStructure(logicalStructure);
+        workpiece.setLogicalStructure(processIssue);
         workpiece.setId(getGeneratedProcess().getId().toString());
         fileService.createProcessLocation(getGeneratedProcess());
-        final URI metadataFileUri = processService.getMetadataFileUri(getGeneratedProcess());
+        URI metadataFileUri = processService.getMetadataFileUri(getGeneratedProcess());
         metsService.saveWorkpiece(workpiece, metadataFileUri);
     }
 
