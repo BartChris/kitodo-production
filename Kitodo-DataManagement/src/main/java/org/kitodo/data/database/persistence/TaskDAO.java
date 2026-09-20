@@ -11,6 +11,7 @@
 
 package org.kitodo.data.database.persistence;
 
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -19,11 +20,14 @@ import java.util.Objects;
 
 import jakarta.persistence.PersistenceException;
 
+import org.apache.commons.collections4.ListUtils;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.kitodo.data.database.beans.Process;
 import org.kitodo.data.database.beans.Task;
+import org.kitodo.data.database.beans.User;
+import org.kitodo.data.database.enums.TaskEditType;
 import org.kitodo.data.database.enums.TaskStatus;
 import org.kitodo.data.database.exceptions.DAOException;
 import org.kitodo.utils.Stopwatch;
@@ -262,5 +266,97 @@ public class TaskDAO extends BaseDAO<Task> {
             map.put(s, 0);
         }
         return map;
+    }
+
+    private static final int UPDATE_CHUNK_SIZE = 1000;
+
+    /**
+     * Updates the processing state of the given tasks directly in the database.
+     *
+     * @param taskIds IDs of the tasks to update
+     * @param processingStatus processing status to set
+     * @param editType edit type to set
+     * @param processingTime processing time to set
+     * @param processingUser processing user to set
+     */
+    public void updateProcessingStateForTasks(
+        List<Integer> taskIds,
+        TaskStatus processingStatus,
+        TaskEditType editType,
+        Date processingTime,
+        User processingUser) throws DAOException {
+
+        for (List<Integer> taskIdChunk : ListUtils.partition(taskIds, UPDATE_CHUNK_SIZE)) {
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("taskIds", taskIdChunk);
+            parameters.put("processingStatus", processingStatus);
+            parameters.put("editType", editType);
+            parameters.put("processingTime", processingTime);
+            parameters.put("processingUser", processingUser);
+
+            executeUpdate("""
+                        UPDATE Task t
+                        SET t.processingStatus = :processingStatus,
+                            t.editType = :editType,
+                            t.processingTime = :processingTime,
+                            t.processingUser = :processingUser
+                        WHERE t.id IN (:taskIds)
+                        """, parameters);
+        }
+    }
+
+    /**
+     * Updates the processing status of the given tasks directly in the database.
+     *
+     * @param taskIds IDs of the tasks to update
+     * @param processingStatus processing status to set
+     */
+    public void updateProcessingStatusForTasks(
+        List<Integer> taskIds,
+        TaskStatus processingStatus) throws DAOException {
+
+        for (List<Integer> taskIdChunk : ListUtils.partition(taskIds, UPDATE_CHUNK_SIZE)) {
+            executeUpdate("""
+                        UPDATE Task t
+                        SET t.processingStatus = :processingStatus
+                        WHERE t.id IN (:taskIds)
+                        """, Map.of("taskIds", taskIdChunk, "processingStatus", processingStatus));
+        }
+    }
+
+    /**
+     * Updates a closed task directly in the database.
+     *
+     * @param taskId ID of the task to update
+     * @param editType edit type to set
+     * @param processingTime processing time to set
+     * @param processingUser processing user to set
+     * @param processingEnd processing end time to set
+     */
+    public void updateClosedTask(
+        Integer taskId,
+        TaskEditType editType,
+        Date processingTime,
+        User processingUser,
+        Date processingEnd) throws DAOException {
+
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("taskId", taskId);
+        parameters.put("processingStatus", TaskStatus.DONE);
+        parameters.put("editType", editType);
+        parameters.put("processingTime", processingTime);
+        parameters.put("processingUser", processingUser);
+        parameters.put("processingEnd", processingEnd);
+
+        executeUpdate("""
+                    UPDATE Task t
+                    SET t.processingStatus = :processingStatus,
+                        t.editType = :editType,
+                        t.processingTime = :processingTime,
+                        t.processingUser = :processingUser,
+                        t.processingEnd = :processingEnd,
+                        t.correction = false
+                    WHERE t.id = :taskId
+                    """, parameters);
     }
 }

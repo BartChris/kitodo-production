@@ -19,7 +19,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -116,7 +119,6 @@ public class WorkflowControllerService {
                     task.setProcessingTime(new Date());
                     taskService.replaceProcessingUser(task, getCurrentUser());
                     ServiceManager.getTaskService().save(task);
-                    ServiceManager.getProcessService().save(task.getProcess());
                 }
             }
         }
@@ -147,6 +149,7 @@ public class WorkflowControllerService {
             task.setProcessingTime(now);
             taskService.replaceProcessingUser(task, currentUser);
             setProcessingStatusDown(task);
+
             taskService.save(task);
 
             if (task.getProcessingStatus() == TaskStatus.LOCKED) {
@@ -154,6 +157,7 @@ public class WorkflowControllerService {
 
                 for (Task previousTask : previousTasks) {
                     setProcessingStatusDown(previousTask);
+
                     taskService.save(previousTask);
                 }
             }
@@ -210,6 +214,11 @@ public class WorkflowControllerService {
             }
         }
         return lastOpenTasks;
+    }
+
+    private List<Task> getCurrentOrLastClosedTasks(Process process) {
+        List<Task> tasks = processService.getCurrentTasks(process);
+        return tasks.isEmpty() ? getLastClosedTask(process) : tasks;
     }
 
     private boolean validateMetadata(Task task) throws IOException, DAOException, SAXException, FileStructureValidationException {
@@ -319,7 +328,13 @@ public class WorkflowControllerService {
         taskService.replaceProcessingUser(task, user);
         task.setProcessingEnd(new Date());
 
-        taskService.save(task);
+        taskService.updateClosedTask(
+            task.getId(),
+            task.getEditType(),
+            task.getProcessingTime(),
+            task.getProcessingUser(),
+            task.getProcessingEnd()
+        );
 
         automaticTasks = new ArrayList<>();
 
@@ -546,9 +561,8 @@ public class WorkflowControllerService {
         Integer numberOfFiles = ServiceManager.getFileService().getNumberOfFiles(imagesOrigDirectory);
         if (!process.getSortHelperImages().equals(numberOfFiles)) {
             process.setSortHelperImages(numberOfFiles);
+            ServiceManager.getProcessService().save(process);
         }
-
-        ServiceManager.getProcessService().save(process);
 
         for (Task automaticTask : automaticTasks) {
             automaticTask.setProcessingBegin(new Date());
@@ -726,7 +740,13 @@ public class WorkflowControllerService {
 
             processAutomaticTask(task);
 
-            taskService.save(task);
+            taskService.updateProcessingStateForTasks(
+                Collections.singletonList(task.getId()),
+                task.getProcessingStatus(),
+                task.getEditType(),
+                task.getProcessingTime(),
+                task.getProcessingUser()
+            );
         } else {
             // close task as it is not going to be executed
             task.setProcessingStatus(TaskStatus.DONE);
@@ -735,7 +755,13 @@ public class WorkflowControllerService {
             task.setEditType(TaskEditType.AUTOMATIC);
 
             task.setCorrection(false);
-            taskService.save(task);
+            taskService.updateClosedTask(
+                task.getId(),
+                task.getEditType(),
+                task.getProcessingTime(),
+                task.getProcessingUser(),
+                task.getProcessingEnd()
+            );
 
             activateTasksForClosedTask(task);
         }
@@ -826,13 +852,27 @@ public class WorkflowControllerService {
      * Set up processing status for given list of processes.
      */
     public void setTaskStatusUpForProcesses(List<Process> processes) {
-        for (Process processForStatus : processes) {
+        User user = getCurrentUser();
+        Date now = new Date();
+
+        Map<TaskStatus, List<Integer>> tasksByStatus = new EnumMap<>(TaskStatus.class);
+        Map<String, List<Integer>> processesByStatus = new HashMap<>();
+
+        for (Process process : processes) {
             try {
-                setTasksStatusUp(processForStatus);
+                collectTaskStatusUp(process, user, now, tasksByStatus);
+                addProcess(processesByStatus, process);
             } catch (DAOException | IOException | SAXException | FileStructureValidationException e) {
                 Helper.setErrorMessage("errorChangeTaskStatus",
-                        new Object[] {Helper.getTranslation("up"), processForStatus.getId() }, logger, e);
+                    new Object[] {Helper.getTranslation("up"), process.getId()}, logger, e);
             }
+        }
+
+        try {
+            updateTasks(tasksByStatus, now, user);
+            updateProcesses(processesByStatus);
+        } catch (DAOException e) {
+            Helper.setErrorMessage("errorChangeTaskStatus", logger, e);
         }
     }
 
@@ -840,20 +880,113 @@ public class WorkflowControllerService {
      * Set down processing status for given list of processes.
      */
     public void setTaskStatusDownForProcesses(List<Process> processes) {
-        for (Process processForStatus : processes) {
-            try {
-                setTasksStatusDown(processForStatus);
+        User user = getCurrentUser();
+        Date now = new Date();
 
-                updateProcessSortHelperStatus(processForStatus);
+        Map<TaskStatus, List<Integer>> tasksByStatus = new EnumMap<>(TaskStatus.class);
+        Map<TaskStatus, List<Integer>> previousTasksByStatus = new EnumMap<>(TaskStatus.class);
+        Map<String, List<Integer>> processesByStatus = new HashMap<>();
 
-                ServiceManager.getProcessService().updateSortHelperStatus(
-                    processForStatus.getId(),
-                    processForStatus.getSortHelperStatus()
-                );
-            } catch (DAOException e) {
-                Helper.setErrorMessage("errorChangeTaskStatus",
-                    new Object[] {Helper.getTranslation("down"), processForStatus.getId() }, logger, e);
+        try {
+            for (Process process : processes) {
+                collectTaskStatusDown(process, user, now, tasksByStatus, previousTasksByStatus);
+                addProcess(processesByStatus, process);
+            }
+
+            updateTasks(tasksByStatus, now, user);
+            updateTaskStatuses(previousTasksByStatus);
+            updateProcesses(processesByStatus);
+
+        } catch (DAOException e) {
+            Helper.setErrorMessage("errorChangeTaskStatus", logger, e);
+        }
+    }
+
+    private void collectTaskStatusDown(Process process, User user, Date now,
+                                       Map<TaskStatus, List<Integer>> tasksByStatus,
+                                       Map<TaskStatus, List<Integer>> previousTasksByStatus) {
+
+        for (Task task : getCurrentOrLastClosedTasks(process)) {
+            task.setEditType(TaskEditType.ADMIN);
+            task.setProcessingTime(now);
+            taskService.replaceProcessingUser(task, user);
+
+            setProcessingStatusDown(task);
+            addTask(tasksByStatus, task);
+
+            if (task.getProcessingStatus() == TaskStatus.LOCKED) {
+                for (Task previousTask : getPreviousTasks(task)) {
+                    setProcessingStatusDown(previousTask);
+                    addTask(previousTasksByStatus, previousTask);
+                }
             }
         }
     }
+
+    private void collectTaskStatusUp(Process process, User user, Date now,
+                                     Map<TaskStatus, List<Integer>> tasksByStatus)
+        throws DAOException, IOException, SAXException, FileStructureValidationException {
+
+        for (Task task : getCurrentOrLastClosedTasks(process)) {
+            if (task.getProcessingStatus() == TaskStatus.DONE) {
+                continue;
+            }
+
+            setProcessingStatusUp(task);
+            task.setEditType(TaskEditType.ADMIN);
+
+            if (task.getProcessingStatus() == TaskStatus.DONE) {
+                close(task);
+                continue;
+            }
+
+            task.setProcessingTime(now);
+            taskService.replaceProcessingUser(task, user);
+            addTask(tasksByStatus, task);
+        }
+    }
+
+    private void addTask(Map<TaskStatus, List<Integer>> tasksByStatus, Task task) {
+        tasksByStatus
+            .computeIfAbsent(task.getProcessingStatus(), status -> new ArrayList<>())
+            .add(task.getId());
+    }
+
+    private void addProcess(Map<String, List<Integer>> processesByStatus, Process process) {
+        updateProcessSortHelperStatus(process);
+
+        processesByStatus
+            .computeIfAbsent(process.getSortHelperStatus(), status -> new ArrayList<>())
+            .add(process.getId());
+    }
+
+    private void updateTasks(Map<TaskStatus, List<Integer>> tasksByStatus,
+                             Date now, User user) throws DAOException {
+
+        for (Map.Entry<TaskStatus, List<Integer>> entry : tasksByStatus.entrySet()) {
+            taskService.updateProcessingStateForTasks(
+                entry.getValue(),
+                entry.getKey(),
+                TaskEditType.ADMIN,
+                now,
+                user);
+        }
+    }
+
+    private void updateTaskStatuses(Map<TaskStatus, List<Integer>> tasksByStatus)
+        throws DAOException {
+
+        for (Map.Entry<TaskStatus, List<Integer>> entry : tasksByStatus.entrySet()) {
+            taskService.updateProcessingStatusForTasks(entry.getValue(), entry.getKey());
+        }
+    }
+
+    private void updateProcesses(Map<String, List<Integer>> processesByStatus)
+        throws DAOException {
+
+        for (Map.Entry<String, List<Integer>> entry : processesByStatus.entrySet()) {
+            processService.updateSortHelperStatus(entry.getValue(), entry.getKey());
+        }
+    }
+
 }
