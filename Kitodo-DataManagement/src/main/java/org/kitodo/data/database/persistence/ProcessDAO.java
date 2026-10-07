@@ -121,23 +121,24 @@ public class ProcessDAO extends BaseDAO<Process> {
     }
 
     /**
-     *  Updates the sort helper status of the process with the given ID directly in the database.
+     * Updates the sort helper status of the given processes directly in the database.
      *
-     * @param processId ID of the process to update
+     * @param processIds IDs of the processes to update
      * @param sortHelperStatus new sort helper status, may be {@code null}
      */
-    public void updateSortHelperStatus(Integer processId, String sortHelperStatus)
+    public void updateSortHelperStatus(List<Integer> processIds, String sortHelperStatus)
         throws DAOException {
 
-        Map<String, Object> parameters = new HashMap<>();
-        parameters.put("sortHelperStatus", sortHelperStatus);
-        parameters.put("processId", processId);
+        for (List<Integer> processIdChunk : ListUtils.partition(processIds, UPDATE_CHUNK_SIZE)) {
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("sortHelperStatus", sortHelperStatus);
+            parameters.put("processIds", processIdChunk);
 
-        executeUpdate("""
-            UPDATE Process p
-            SET p.sortHelperStatus = :sortHelperStatus
-            WHERE p.id = :processId
-            """, parameters);
-
+            executeUpdate("""
+                        UPDATE Process p
+                        SET p.sortHelperStatus = :sortHelperStatus
+                        WHERE p.id IN (:processIds)
+                        """, parameters);
+        }
     }
 }

@@ -950,6 +950,59 @@ public class TaskService extends BaseBeanService<Task, TaskDAO> {
     }
 
     /**
+     * Updates processing state for the given tasks.
+     *
+     * @param taskIds IDs of tasks to update
+     * @param processingStatus processing status to set
+     * @param editType edit type to set
+     * @param processingTime processing time to set
+     * @param processingUser processing user to set
+     */
+    public void updateProcessingStateForTasks(
+        List<Integer> taskIds,
+        TaskStatus processingStatus,
+        TaskEditType editType,
+        Date processingTime,
+        User processingUser) throws DAOException {
+
+        dao.updateProcessingStateForTasks(
+            taskIds,
+            processingStatus,
+            editType,
+            processingTime,
+            processingUser
+        );
+    }
+
+    /**
+     * Updates processing status for the given tasks.
+     *
+     * @param taskIds IDs of tasks to update
+     * @param processingStatus processing status to set
+     */
+    public void updateProcessingStatusForTasks(
+        List<Integer> taskIds,
+        TaskStatus processingStatus) throws DAOException {
+
+        dao.updateProcessingStatusForTasks(taskIds, processingStatus);
+    }
+
+    /**
+     * Updates a closed task.
+     *
+     * @param taskId ID of the task to update
+     * @param editType edit type to set
+     * @param processingTime processing time to set
+     * @param processingUser processing user to set
+     * @param processingEnd processing end time to set
+     */
+    public void updateClosedTask(Integer taskId, TaskEditType editType,
+                                 Date processingTime, User processingUser, Date processingEnd) throws DAOException {
+
+        dao.updateClosedTask(taskId, editType, processingTime, processingUser, processingEnd);
+    }
+
+    /**
      * Stores a task in the database.
      *
      * @param taskBean

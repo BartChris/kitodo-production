@@ -927,12 +927,12 @@ public class ProcessService extends BaseBeanService<Process, ProcessDAO> {
     /**
      * Updates the sort helper status of the process with the given ID directly in the database.
      *
-     * @param processId ID of the process to update
+     * @param processIds ID of the process to update
      * @param sortHelperStatus new sort helper status, may be {@code null}
      */
-    public void updateSortHelperStatus(Integer processId, String sortHelperStatus)
+    public void updateSortHelperStatus(List<Integer> processIds, String sortHelperStatus)
         throws DAOException {
-        dao.updateSortHelperStatus(processId, sortHelperStatus);
+        dao.updateSortHelperStatus(processIds, sortHelperStatus);
     }
 
     /**
